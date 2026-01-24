@@ -39,15 +39,6 @@ This document outlines the key architectural decisions, patterns, and technologi
   - Strong community support
 - **Version**: React Native 0.81.5
 
-### React
-- **Decision**: React 19.1.0 with React Compiler enabled
-- **Rationale**: 
-  - Latest features and performance improvements
-  - React Compiler for automatic optimizations
-  - Modern hooks API
-
----
-
 ## Routing
 
 ### Expo Router
