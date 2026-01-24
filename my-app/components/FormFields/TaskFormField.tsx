@@ -5,7 +5,7 @@ import { FormDatePicker } from './FormDatePicker';
 import { FormDropdown } from './FormDropdown';
 import { FormInput } from './FormInput';
 import { FormPriorityStatus } from './FormPriorityStatus';
-import { FormReadOnly } from './FormReadOnly';
+import { FormReadOnly, type FormatValueFunction } from './FormReadOnly';
 import { FormTextArea } from './FormTextArea';
 
 export type TaskFormFieldType = 'title' | 'description' | 'category' | 'priority' | 'status' | 'dueDate' | 'createdDate';
@@ -35,7 +35,7 @@ export interface TaskFormFieldProps {
   dueDateMinimumDate?: Date;
   // Created Date field props
   createdDateLabel?: string;
-  createdDateFormatter?: (value: any) => string;
+  createdDateFormatter?: FormatValueFunction;
   // Common props
   containerStyle?: object;
 }

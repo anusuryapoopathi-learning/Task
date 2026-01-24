@@ -1,3 +1,4 @@
+import type { CreateTaskRequest, UpdateTaskRequest } from '@/api/mock/tasks';
 import { asyncStorage } from '@/lib/storage';
 
 const QUEUE_KEY = 'offline_mutation_queue';
@@ -8,7 +9,7 @@ export interface QueuedMutation {
   id: string;
   type: MutationType;
   timestamp: number;
-  data: any;
+  data: CreateTaskRequest | Partial<UpdateTaskRequest>;
   taskId?: string; // For update/delete/markComplete
 }
 

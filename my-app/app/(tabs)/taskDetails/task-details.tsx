@@ -4,15 +4,15 @@ import { CustomToaster } from '@/components/CustomToaster';
 import { DetailCard } from '@/components/DetailCard';
 import type { TaskPriority, TaskStatus } from '@/components/TaskCard';
 import { TASK_DETAIL_SECTIONS, type TaskDetailSection } from '@/constants/taskDetailFields';
+import { formatDateToUS } from '@/utils/dateFormatter';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
     FlatList,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './styles';
@@ -48,47 +48,7 @@ export default function TaskDetailsScreen() {
       : new Date();
   }, [task]);
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#1F2937" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Task Details</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={styles.errorContainer}>
-          <ActivityIndicator size="large" color="#8B5CF6" />
-          <Text style={styles.errorText}>Loading task...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (!task) {
-    return (
-      <View style={styles.container}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#1F2937" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Task Details</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Task not found</Text>
-        </View>
-      </View>
-    );
-  }
-
+  // Helper functions - defined as regular functions (not hooks) so they can be used conditionally
   const getStatusColor = (status: TaskStatus): string => {
     switch (status) {
       case 'In Progress':
@@ -141,57 +101,49 @@ export default function TaskDetailsScreen() {
     }
   };
 
-  const formatDate = (date?: Date | string): string => {
-    if (!date) return 'Not set';
-    
-    // Handle both Date objects and date strings
-    const dateObj = date instanceof Date ? date : new Date(date);
-    
-    // Check if date is valid
-    if (isNaN(dateObj.getTime())) return 'Not set';
-    
-    return dateObj.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+  // All hooks MUST be called before any conditional returns
+  const formatDate = useCallback((date?: Date | string): string => {
+    return formatDateToUS(date);
+  }, []);
 
-  const handleEditTask = () => {
+  const handleEditTask = useCallback(() => {
+    if (!task?.id) return;
     router.push({
       pathname: '/(tabs)/editTask/edit-task',
       params: { taskId: task.id },
     });
-  };
+  }, [task?.id]);
 
-  const handleMarkComplete = () => {
+  const handleMarkComplete = useCallback(() => {
     if (task?.id) {
       markCompleteMutation.mutate(task.id);
     }
-  };
+  }, [task?.id, markCompleteMutation]);
 
   // Render detail section based on type
-  const renderDetailSection = (item: TaskDetailSection) => {
+  const renderDetailSection = useCallback((item: TaskDetailSection) => {
     if (!task) return null;
+
+    const currentTask = task; // Type narrowing for TypeScript
 
     switch (item.type) {
       case 'title':
         return (
           <View style={styles.titleSection}>
-            <Text style={styles.taskTitle}>{task.title}</Text>
+            <Text style={styles.taskTitle}>{currentTask.title}</Text>
             <View
               style={[
                 styles.priorityBadge,
-                { backgroundColor: getPriorityColor(task.priority) },
+                { backgroundColor: getPriorityColor(currentTask.priority) },
               ]}
             >
               <Text
                 style={[
                   styles.priorityText,
-                  { color: getPriorityTextColor(task.priority) },
+                  { color: getPriorityTextColor(currentTask.priority) },
                 ]}
               >
-                {task.priority}
+                {currentTask.priority}
               </Text>
             </View>
           </View>
@@ -201,16 +153,16 @@ export default function TaskDetailsScreen() {
           <View
             style={[
               styles.statusBadge,
-              { backgroundColor: getStatusColor(task.status) },
+              { backgroundColor: getStatusColor(currentTask.status) },
             ]}
           >
             <Text
               style={[
                 styles.statusText,
-                { color: getStatusTextColor(task.status) },
+                { color: getStatusTextColor(currentTask.status) },
               ]}
             >
-              {task.status}
+              {currentTask.status}
             </Text>
           </View>
         );
@@ -219,7 +171,7 @@ export default function TaskDetailsScreen() {
           <View style={styles.descriptionCard}>
             <Text style={styles.descriptionLabel}>Description</Text>
             <Text style={styles.descriptionText}>
-              {task.description || 'No description provided'}
+              {currentTask.description || 'No description provided'}
             </Text>
           </View>
         );
@@ -231,14 +183,14 @@ export default function TaskDetailsScreen() {
                 <DetailCard
                   icon="pricetag-outline"
                   label="Category"
-                  value={task.category || 'Not set'}
+                  value={currentTask.category || 'Not set'}
                 />
               </View>
               <View style={styles.gridItem}>
                 <DetailCard
                   icon="flag-outline"
                   label="Priority"
-                  value={task.priority}
+                  value={currentTask.priority}
                 />
               </View>
             </View>
@@ -247,7 +199,7 @@ export default function TaskDetailsScreen() {
                 <DetailCard
                   icon="calendar-outline"
                   label="Due Date"
-                  value={formatDate(task.dueDate)}
+                  value={formatDate(currentTask.dueDate)}
                 />
               </View>
               <View style={styles.gridItem}>
@@ -263,11 +215,19 @@ export default function TaskDetailsScreen() {
       default:
         return null;
     }
-  };
+  }, [task, formatDate, createdDate, getPriorityColor, getPriorityTextColor, getStatusColor, getStatusTextColor]);
+
+  // TypeScript type guard: after early returns, task is guaranteed to be non-null
+  // This must be after all hooks but before the return statement
+  if (!task) {
+    return null; // This should never happen due to early return above, but TypeScript needs it
+  }
+
+  const currentTask = task;
 
   return (
     <View style={styles.container}>
-      {/* Sticky Header */}
+      {/* Sticky Header - Always visible, even during loading */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
           style={styles.backButton}
@@ -290,7 +250,7 @@ export default function TaskDetailsScreen() {
 
       {/* Sticky Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
-        {task.status !== 'Completed' && (
+        {currentTask.status !== 'Completed' && (
           <View style={styles.buttonContainer}>
             <CustomButton
               title="Edit Task"
@@ -302,7 +262,7 @@ export default function TaskDetailsScreen() {
             />
           </View>
         )}
-        <View style={[styles.buttonContainer, task.status === 'Completed' && styles.fullWidthButton]}>
+        <View style={[styles.buttonContainer, currentTask.status === 'Completed' && styles.fullWidthButton]}>
           <CustomButton
             title="Mark Complete"
             onPress={handleMarkComplete}
@@ -311,7 +271,7 @@ export default function TaskDetailsScreen() {
             leftIcon={<Ionicons name="checkmark-circle-outline" size={20} color="#fff" />}
             containerStyle={styles.completeButton}
             loading={markCompleteMutation.isPending}
-            disabled={markCompleteMutation.isPending || task.status === 'Completed'}
+            disabled={markCompleteMutation.isPending || currentTask.status === 'Completed'}
           />
         </View>
       </View>

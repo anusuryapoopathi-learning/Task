@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ViewStyle,
   TextStyle,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -75,28 +76,34 @@ export const SimpleDropdown: React.FC<SimpleDropdownProps> = ({
 
         {isOpen && (
           <View style={styles.optionsContainer}>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.optionItem,
-                  option.value === value && styles.optionItemSelected,
-                ]}
-                onPress={() => handleSelect(option)}
-              >
-                <Text
+            <ScrollView
+              style={styles.optionsScrollView}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
+              {options.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
                   style={[
-                    styles.optionText,
-                    option.value === value && styles.optionTextSelected,
+                    styles.optionItem,
+                    option.value === value && styles.optionItemSelected,
                   ]}
+                  onPress={() => handleSelect(option)}
                 >
-                  {option.label}
-                </Text>
-                {option.value === value && (
-                  <Ionicons name="checkmark" size={20} color="#8B5CF6" />
-                )}
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.optionText,
+                      option.value === value && styles.optionTextSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  {option.value === value && (
+                    <Ionicons name="checkmark" size={20} color="#8B5CF6" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
       </View>
@@ -161,8 +168,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    maxHeight: 200,
+    maxHeight: 250,
     zIndex: 1000,
+    overflow: 'hidden',
+  },
+  optionsScrollView: {
+    maxHeight: 250,
   },
   optionItem: {
     flexDirection: 'row',

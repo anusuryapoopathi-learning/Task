@@ -2,13 +2,21 @@ import { useCreateTask } from '@/api/tasks';
 import { CustomToaster } from '@/components/CustomToaster';
 import { TaskFormField } from '@/components/FormFields';
 import { TaskFormFooter } from '@/components/TaskFormFooter';
+import { DEFAULT_PRIORITY, DEFAULT_STATUS } from '@/constants/defaultValues';
 import { TASK_FORM_FIELDS } from '@/constants/taskFormFields';
+import {
+    CATEGORY_MAP_TO_DISPLAY,
+    CATEGORY_OPTIONS,
+    PRIORITY_OPTIONS,
+    STATUS_OPTIONS,
+} from '@/constants/taskOptions';
+import { formatDateToUK, getTodayStartOfDay } from '@/utils/dateFormatter';
 import type { CreateTaskInput } from '@/zod/TastCreateZod/createTask';
 import { createTaskSchema } from '@/zod/TastCreateZod/createTask';
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import {
     FlatList,
@@ -21,51 +29,24 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './styles';
 
-// Map category values to display names
-const categoryMap: Record<string, string> = {
-  'work': 'Work',
-  'personal': 'Personal',
-  'interview': 'Interview Preparation',
-  'health': 'Health & Fitness',
-  'learning': 'Learning',
-};
-
-const categoryOptions = [
-  { label: 'Work', value: 'work' },
-  { label: 'Personal', value: 'personal' },
-  { label: 'Interview Preparation', value: 'interview' },
-  { label: 'Health & Fitness', value: 'health' },
-  { label: 'Learning', value: 'learning' },
-];
-
-const priorityOptions = [
-  { label: 'Low', value: 'Low', color: '#10B981' },
-  { label: 'Medium', value: 'Medium', color: '#F59E0B' },
-  { label: 'High', value: 'High', color: '#EF4444' },
-];
-
-const statusOptions = [
-  { label: 'Pending', value: 'Pending', color: '#6B7280' },
-  { label: 'In Progress', value: 'In Progress', color: '#3B82F6' },
-  { label: 'Completed', value: 'Completed', color: '#10B981' },
-];
-
 export default function CreateTaskScreen() {
   const insets = useSafeAreaInsets();
   const createTaskMutation = useCreateTask();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const defaultFormValues = useMemo<CreateTaskInput>(() => ({
+    title: '',
+    description: '',
+    category: '',
+    priority: DEFAULT_PRIORITY,
+    status: DEFAULT_STATUS,
+    dueDate: new Date(),
+    createdDate: new Date(),
+  }), []);
+
   const methods = useForm<CreateTaskInput>({
     resolver: zodResolver(createTaskSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      category: '',
-      priority: 'Low',
-      status: 'Pending',
-      dueDate: new Date(),
-      createdDate: new Date(),
-    },
+    defaultValues: defaultFormValues,
   });
 
   const { handleSubmit, reset } = methods;
@@ -73,16 +54,8 @@ export default function CreateTaskScreen() {
   // Clear form when screen is focused
   useFocusEffect(
     useCallback(() => {
-      reset({
-        title: '',
-        description: '',
-        category: '',
-        priority: 'Low',
-        status: 'Pending',
-        dueDate: new Date(),
-        createdDate: new Date(),
-      });
-    }, [reset])
+      reset(defaultFormValues);
+    }, [reset, defaultFormValues])
   );
 
   // Handle mutation success/error for toast notifications
@@ -99,34 +72,28 @@ export default function CreateTaskScreen() {
     }
   }, [createTaskMutation.isError, createTaskMutation.error]);
 
-  const onSubmit = (data: CreateTaskInput) => {
+  const onSubmit = useCallback((data: CreateTaskInput) => {
     createTaskMutation.mutate({
       title: data.title,
       description: data.description,
-      category: categoryMap[data.category] || data.category,
+      category: CATEGORY_MAP_TO_DISPLAY[data.category] || data.category,
       priority: data.priority,
       status: data.status,
       dueDate: data.dueDate,
       createdDate: data.createdDate || new Date(),
     });
-  };
+  }, [createTaskMutation]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     router.replace('/(tabs)');
-  };
+  }, []);
 
-  const createdDateFormatter = (value: any) => {
-    const date = value instanceof Date ? value : new Date(value || new Date());
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
+  const createdDateFormatter = useCallback((value: Date | string | null | undefined): string => {
+    return formatDateToUK(value);
+  }, []);
 
   // Set minimum date to today (prevent selecting past dates)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = useMemo(() => getTodayStartOfDay(), []);
 
   return (
     <FormProvider {...methods}>
@@ -152,9 +119,9 @@ export default function CreateTaskScreen() {
               <TaskFormField
                 type={item.type}
                 name={item.key}
-                categoryOptions={categoryOptions}
-                priorityOptions={priorityOptions}
-                statusOptions={statusOptions}
+                categoryOptions={CATEGORY_OPTIONS}
+                priorityOptions={PRIORITY_OPTIONS}
+                statusOptions={STATUS_OPTIONS}
                 createdDateFormatter={createdDateFormatter}
                 dueDateMinimumDate={item.type === 'dueDate' ? today : undefined}
                 containerStyle={styles.inputContainer}

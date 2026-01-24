@@ -1,7 +1,7 @@
 import { useAuth } from '@/api/auth';
 import { useTasks } from '@/api/tasks';
 import { ProfileBottomSheet } from '@/components/ProfileBottomSheet';
-import { TaskCard } from '@/components/TaskCard';
+import { TaskCard, type Task } from '@/components/TaskCard';
 import { capitalizeUsername, getUsernameFromEmail } from '@/utils/username';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -14,6 +14,17 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './styles';
+
+type IconName = keyof typeof Ionicons.glyphMap;
+
+interface DashboardSection {
+  type: 'section';
+  title: string;
+  icon: IconName;
+  color: string;
+  tasks: Task[];
+  key: string;
+}
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -97,7 +108,7 @@ export default function DashboardScreen() {
           <Text style={styles.loadingText}>Loading tasks...</Text>
         </View>
       ) : (
-        <FlatList
+        <FlatList<DashboardSection>
           data={[
             { type: 'section', title: "Today's Tasks", icon: 'sunny-outline', color: '#F59E0B', tasks: todayTasks, key: 'today' },
             { type: 'section', title: 'Recently Added', icon: 'time-outline', color: '#3B82F6', tasks: recentlyAddedTasks, key: 'recent' },
@@ -106,7 +117,7 @@ export default function DashboardScreen() {
           renderItem={({ item }) => (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name={item.icon as any} size={20} color={item.color} />
+                <Ionicons name={item.icon} size={20} color={item.color} />
                 <Text style={styles.sectionTitle}>{item.title}</Text>
               </View>
               {item.tasks.length === 0 ? (
@@ -116,7 +127,7 @@ export default function DashboardScreen() {
                   {item.key === 'pending' && 'No pending tasks'}
                 </Text>
               ) : (
-                item.tasks.map((task: any) => (
+                item.tasks.map((task) => (
                   <TaskCard
                     key={task.id}
                     task={task}

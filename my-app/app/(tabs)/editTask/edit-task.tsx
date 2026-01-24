@@ -2,13 +2,22 @@ import { useTask, useUpdateTask } from '@/api/tasks';
 import { CustomToaster } from '@/components/CustomToaster';
 import { TaskFormField } from '@/components/FormFields';
 import { TaskFormFooter } from '@/components/TaskFormFooter';
+import { MILLISECONDS_PER_DAY } from '@/constants/defaultValues';
 import { TASK_FORM_FIELDS } from '@/constants/taskFormFields';
+import {
+    CATEGORY_MAP_REVERSE,
+    CATEGORY_MAP_TO_FORM,
+    CATEGORY_OPTIONS,
+    PRIORITY_OPTIONS,
+    STATUS_OPTIONS,
+} from '@/constants/taskOptions';
+import { formatDateToUK, getTodayStartOfDay, normalizeDate } from '@/utils/dateFormatter';
 import type { CreateTaskInput } from '@/zod/TastCreateZod/createTask';
 import { createTaskSchema } from '@/zod/TastCreateZod/createTask';
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FormProvider, useForm } from 'react-hook-form';
 import {
     ActivityIndicator,
@@ -21,43 +30,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './styles';
-
-// Map category values to display names
-const categoryMap: Record<string, string> = {
-  'Work': 'work',
-  'Personal': 'personal',
-  'Interview Preparation': 'interview',
-  'Health & Fitness': 'health',
-  'Learning': 'learning',
-};
-
-const reverseCategoryMap: Record<string, string> = {
-  'work': 'Work',
-  'personal': 'Personal',
-  'interview': 'Interview Preparation',
-  'health': 'Health & Fitness',
-  'learning': 'Learning',
-};
-
-const categoryOptions = [
-  { label: 'Work', value: 'work' },
-  { label: 'Personal', value: 'personal' },
-  { label: 'Interview Preparation', value: 'interview' },
-  { label: 'Health & Fitness', value: 'health' },
-  { label: 'Learning', value: 'learning' },
-];
-
-const priorityOptions = [
-  { label: 'Low', value: 'Low', color: '#10B981' },
-  { label: 'Medium', value: 'Medium', color: '#F59E0B' },
-  { label: 'High', value: 'High', color: '#EF4444' },
-];
-
-const statusOptions = [
-  { label: 'Pending', value: 'Pending', color: '#6B7280' },
-  { label: 'In Progress', value: 'In Progress', color: '#3B82F6' },
-  { label: 'Completed', value: 'Completed', color: '#10B981' },
-];
 
 export default function EditTaskScreen() {
   const insets = useSafeAreaInsets();
@@ -84,18 +56,12 @@ export default function EditTaskScreen() {
   // Load task data when task is fetched
   useEffect(() => {
     if (task) {
-      const categoryValue = categoryMap[task.category || ''] || task.category || '';
-      const dueDateObj = task.dueDate
-        ? task.dueDate instanceof Date
-          ? task.dueDate
-          : new Date(task.dueDate)
-        : new Date();
+      const categoryValue = CATEGORY_MAP_TO_FORM[task.category || ''] || task.category || '';
+      const dueDateObj = normalizeDate(task.dueDate);
       const createdDateObj = task.createdDate
-        ? task.createdDate instanceof Date
-          ? task.createdDate
-          : new Date(task.createdDate)
+        ? normalizeDate(task.createdDate)
         : dueDateObj
-        ? new Date(dueDateObj.getTime() - 24 * 60 * 60 * 1000)
+        ? new Date(dueDateObj.getTime() - MILLISECONDS_PER_DAY)
         : new Date();
 
       reset({
@@ -128,7 +94,7 @@ export default function EditTaskScreen() {
     }
   }, [updateTaskMutation.isError, updateTaskMutation.error]);
 
-  const onSubmit = (data: CreateTaskInput) => {
+  const onSubmit = useCallback((data: CreateTaskInput) => {
     if (!params.taskId) return;
 
     // Don't update createdDate - keep the original
@@ -136,17 +102,17 @@ export default function EditTaskScreen() {
       id: params.taskId,
       title: data.title,
       description: data.description,
-      category: reverseCategoryMap[data.category] || data.category,
+      category: CATEGORY_MAP_REVERSE[data.category] || data.category,
       priority: data.priority,
       status: data.status,
       dueDate: data.dueDate,
       // createdDate should NOT be updated - it's read-only
     });
-  };
+  }, [params.taskId, updateTaskMutation]);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     router.back();
-  };
+  }, []);
 
   if (isLoading) {
     return (
@@ -183,18 +149,12 @@ export default function EditTaskScreen() {
     );
   }
 
-  const createdDateFormatter = (value: any) => {
-    const date = value instanceof Date ? value : new Date(value || new Date());
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
+  const createdDateFormatter = useCallback((value: Date | string | null | undefined): string => {
+    return formatDateToUK(value);
+  }, []);
 
   // Set minimum date to today (prevent selecting past dates)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = useMemo(() => getTodayStartOfDay(), []);
 
   // Track form changes to conditionally show save button
   const [initialValues, setInitialValues] = useState<CreateTaskInput | null>(null);
@@ -203,18 +163,12 @@ export default function EditTaskScreen() {
   // Store initial values when task is loaded
   useEffect(() => {
     if (task && !initialValues) {
-      const categoryValue = categoryMap[task.category || ''] || task.category || '';
-      const dueDateObj = task.dueDate
-        ? task.dueDate instanceof Date
-          ? task.dueDate
-          : new Date(task.dueDate)
-        : new Date();
+      const categoryValue = CATEGORY_MAP_TO_FORM[task.category || ''] || task.category || '';
+      const dueDateObj = normalizeDate(task.dueDate);
       const createdDateObj = task.createdDate
-        ? task.createdDate instanceof Date
-          ? task.createdDate
-          : new Date(task.createdDate)
+        ? normalizeDate(task.createdDate)
         : dueDateObj
-        ? new Date(dueDateObj.getTime() - 24 * 60 * 60 * 1000)
+        ? new Date(dueDateObj.getTime() - MILLISECONDS_PER_DAY)
         : new Date();
 
       const initial = {
@@ -241,8 +195,8 @@ export default function EditTaskScreen() {
 
         // Special handling for dates
         if (formKey === 'dueDate' || formKey === 'createdDate') {
-          const initialDate = initialValue instanceof Date ? initialValue : new Date(initialValue);
-          const currentDate = currentValue instanceof Date ? currentValue : new Date(currentValue);
+          const initialDate = normalizeDate(initialValue as Date | string | null | undefined);
+          const currentDate = normalizeDate(currentValue as Date | string | null | undefined);
           return initialDate.getTime() !== currentDate.getTime();
         }
 
@@ -276,9 +230,9 @@ export default function EditTaskScreen() {
               <TaskFormField
                 type={item.type}
                 name={item.key}
-                categoryOptions={categoryOptions}
-                priorityOptions={priorityOptions}
-                statusOptions={statusOptions}
+                categoryOptions={CATEGORY_OPTIONS}
+                priorityOptions={PRIORITY_OPTIONS}
+                statusOptions={STATUS_OPTIONS}
                 createdDateFormatter={createdDateFormatter}
                 dueDateMinimumDate={item.type === 'dueDate' ? today : undefined}
                 containerStyle={styles.inputContainer}

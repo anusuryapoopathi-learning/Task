@@ -1,13 +1,16 @@
+import {
+    createTask as createTaskAPI,
+    markTaskComplete,
+    updateTask as updateTaskAPI,
+    type CreateTaskRequest,
+    type UpdateTaskRequest,
+} from '@/api/mock/tasks';
+import { taskQueryKeys } from '@/api/query-keys';
+import type { Task } from '@/components/TaskCard';
+import { getQueuedMutations, removeQueuedMutation } from '@/services/offlineQueue';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNetworkStatus } from './useNetworkStatus';
-import { getQueuedMutations, removeQueuedMutation, type QueuedMutation } from '@/services/offlineQueue';
-import {
-  createTask as createTaskAPI,
-  updateTask as updateTaskAPI,
-  markTaskComplete,
-} from '@/api/mock/tasks';
-import { useQueryClient } from '@tanstack/react-query';
-import { taskQueryKeys } from '@/api/query-keys';
 
 export function useOfflineSync() {
   const { isOnline } = useNetworkStatus();
@@ -32,34 +35,38 @@ export function useOfflineSync() {
       for (const mutation of queue) {
         try {
           // Helper function to convert date strings to Date objects
-          const convertDates = (data: any): any => {
-            if (!data || typeof data !== 'object') return data;
+          const convertDates = (
+            data: CreateTaskRequest | Partial<UpdateTaskRequest>
+          ): CreateTaskRequest | UpdateTaskRequest => {
+            if (!data || typeof data !== 'object') {
+              throw new Error('Invalid data for date conversion');
+            }
             
             const converted = { ...data };
             
             // Convert dueDate if it's a string
-            if (converted.dueDate && typeof converted.dueDate === 'string') {
+            if ('dueDate' in converted && converted.dueDate && typeof converted.dueDate === 'string') {
               converted.dueDate = new Date(converted.dueDate);
             }
             
             // Convert createdDate if it's a string
-            if (converted.createdDate && typeof converted.createdDate === 'string') {
+            if ('createdDate' in converted && converted.createdDate && typeof converted.createdDate === 'string') {
               converted.createdDate = new Date(converted.createdDate);
             }
             
-            return converted;
+            return converted as CreateTaskRequest | UpdateTaskRequest;
           };
 
           switch (mutation.type) {
             case 'create':
-              await createTaskAPI(convertDates(mutation.data));
+              await createTaskAPI(convertDates(mutation.data) as CreateTaskRequest);
               break;
             case 'update':
               if (mutation.taskId) {
                 await updateTaskAPI({
                   id: mutation.taskId,
                   ...convertDates(mutation.data),
-                });
+                } as UpdateTaskRequest);
               }
               break;
             case 'markComplete':

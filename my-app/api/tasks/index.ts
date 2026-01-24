@@ -61,6 +61,8 @@ export function useTasks() {
  * Get a single task by ID
  */
 export function useTask(id: string) {
+  const queryClient = useQueryClient();
+  
   return useQuery<Task | null>({
     queryKey: taskQueryKeys.detail(id).queryKey,
     queryFn: async () => {
@@ -70,6 +72,17 @@ export function useTask(id: string) {
     },
     enabled: !!id,
     staleTime: 0,
+    // Use cached data from all tasks query if available for instant display
+    placeholderData: () => {
+      const allTasks = queryClient.getQueryData<Task[]>(taskQueryKeys.all.queryKey);
+      if (allTasks) {
+        const cachedTask = allTasks.find((t) => t.id === id);
+        if (cachedTask) {
+          return normalizeTaskDates([cachedTask])[0];
+        }
+      }
+      return undefined;
+    },
     select: (data) => {
       if (!data) return null;
       return normalizeTaskDates([data])[0];

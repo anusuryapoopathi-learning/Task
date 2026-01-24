@@ -1,14 +1,16 @@
 import React from 'react';
 import { useFormContext } from 'react-hook-form';
-import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 
 export interface FormReadOnlyProps {
   name: string;
   label?: string;
-  formatValue?: (value: any) => string;
+  formatValue?: (value: unknown) => string;
   containerStyle?: ViewStyle;
   labelStyle?: TextStyle;
 }
+
+export type FormatValueFunction = (value: unknown) => string;
 
 export const FormReadOnly: React.FC<FormReadOnlyProps> = ({
   name,
