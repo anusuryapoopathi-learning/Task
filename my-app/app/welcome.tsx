@@ -10,8 +10,10 @@ import {
     Text,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function WelcomeScreen() {
+  const insets = useSafeAreaInsets();
   const { data: user } = useAuth();
   const username = user?.email ? capitalizeUsername(getUsernameFromEmail(user.email)) : 'User';
 
@@ -23,7 +25,7 @@ export default function WelcomeScreen() {
     <FlatList
       data={[{ type: 'content', key: 'content' }]}
       renderItem={() => (
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           {/* Icon with gradient and decorative circles */}
           <View style={styles.iconSection}>
             <View style={styles.decorativeCircles}>
@@ -87,11 +89,10 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexGrow: 1,
+    justifyContent: 'center',
   },
   content: {
-    flex: 1,
     padding: 24,
-    justifyContent: 'center',
     alignItems: 'center',
   },
   iconSection: {
