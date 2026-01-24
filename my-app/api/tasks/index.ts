@@ -111,16 +111,20 @@ export function useCreateTask() {
       if (isOnline) {
         // Invalidate and refetch tasks
         queryClient.invalidateQueries({ queryKey: taskQueryKeys.all.queryKey });
-        // Navigate to dashboard
-        router.replace('/(tabs)');
+        // Delay navigation to allow toast to show
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 2000);
       } else {
         // Optimistically update cache when offline
         queryClient.setQueryData<Task[]>(taskQueryKeys.all.queryKey, (old = []) => {
           const normalizedData = normalizeTaskDates([data as Task])[0];
           return [normalizedData, ...normalizeTaskDates(old)];
         });
-        // Navigate to dashboard
-        router.replace('/(tabs)');
+        // Delay navigation to allow toast to show
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 2000);
       }
     },
   });
@@ -160,16 +164,20 @@ export function useUpdateTask() {
         queryClient.invalidateQueries({
           queryKey: taskQueryKeys.detail(data.id).queryKey,
         });
-        // Navigate to tasks screen
-        router.replace('/(tabs)/tasks');
+        // Delay navigation to allow toast to show
+        setTimeout(() => {
+          router.replace('/(tabs)/tasks');
+        }, 2000);
       } else {
         // Optimistically update cache when offline
         queryClient.setQueryData<Task[]>(taskQueryKeys.all.queryKey, (old = []) => {
           const normalizedData = normalizeTaskDates([data as Task])[0];
           return normalizeTaskDates(old).map((task) => (task.id === data.id ? normalizedData : task));
         });
-        // Navigate to tasks screen
-        router.replace('/(tabs)/tasks');
+        // Delay navigation to allow toast to show
+        setTimeout(() => {
+          router.replace('/(tabs)/tasks');
+        }, 2000);
       }
     },
   });
@@ -209,8 +217,10 @@ export function useMarkTaskComplete() {
         queryClient.invalidateQueries({
           queryKey: taskQueryKeys.detail(data.id).queryKey,
         });
-        // Navigate to tasks screen
-        router.replace('/(tabs)/tasks');
+        // Delay navigation to allow toast to show
+        setTimeout(() => {
+          router.replace('/(tabs)/tasks');
+        }, 2000);
       } else {
         // Optimistically update cache when offline
         queryClient.setQueryData<Task[]>(taskQueryKeys.all.queryKey, (old = []) => {
@@ -218,8 +228,10 @@ export function useMarkTaskComplete() {
             task.id === data.id ? { ...task, status: 'Completed' as const } : task
           );
         });
-        // Navigate to tasks screen
-        router.replace('/(tabs)/tasks');
+        // Delay navigation to allow toast to show
+        setTimeout(() => {
+          router.replace('/(tabs)/tasks');
+        }, 2000);
       }
     },
   });

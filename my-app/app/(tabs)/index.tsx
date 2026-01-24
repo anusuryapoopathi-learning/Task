@@ -7,11 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -182,10 +182,6 @@ export default function DashboardScreen() {
       <ProfileBottomSheet
         visible={profileSheetVisible}
         onClose={() => setProfileSheetVisible(false)}
-        onSave={(email) => {
-          // In future, update email via API
-          console.log('Email updated:', email);
-        }}
       />
     </View>
   );

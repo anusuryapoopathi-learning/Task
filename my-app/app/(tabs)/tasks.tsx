@@ -209,9 +209,6 @@ export default function TasksScreen() {
       <ProfileBottomSheet
         visible={profileSheetVisible}
         onClose={() => setProfileSheetVisible(false)}
-        onSave={(email) => {
-          console.log('Email updated:', email);
-        }}
       />
     </View>
   );

@@ -12,13 +12,30 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTask, useMarkTaskComplete } from '@/api/tasks';
 import { DetailCard } from '@/components/DetailCard';
 import { CustomButton } from '@/components/CustomButton';
+import { CustomToaster } from '@/components/CustomToaster';
 import type { TaskStatus, TaskPriority } from '@/components/TaskCard';
+import { useState, useEffect } from 'react';
 
 export default function TaskDetailsScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ taskId: string }>();
   const { data: task, isLoading } = useTask(params.taskId || '');
   const markCompleteMutation = useMarkTaskComplete();
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Handle mutation success/error for toast notifications
+  // MUST be before any conditional returns to follow Rules of Hooks
+  useEffect(() => {
+    if (markCompleteMutation.isSuccess && markCompleteMutation.data) {
+      setToastMessage('Task marked as completed!');
+    }
+  }, [markCompleteMutation.isSuccess, markCompleteMutation.data]);
+
+  useEffect(() => {
+    if (markCompleteMutation.isError) {
+      setToastMessage(markCompleteMutation.error?.message || 'Failed to mark task as complete');
+    }
+  }, [markCompleteMutation.isError, markCompleteMutation.error]);
 
   if (isLoading) {
     return (
@@ -137,7 +154,7 @@ export default function TaskDetailsScreen() {
   };
 
   const handleMarkComplete = () => {
-    if (task.id) {
+    if (task?.id) {
       markCompleteMutation.mutate(task.id);
     }
   };
@@ -276,6 +293,14 @@ export default function TaskDetailsScreen() {
           />
         </View>
       </View>
+
+      {/* Toast Notification */}
+      <CustomToaster
+        visible={toastMessage !== null}
+        message={toastMessage || ''}
+        type={markCompleteMutation.isError ? 'error' : 'success'}
+        onHide={() => setToastMessage(null)}
+      />
     </View>
   );
 }

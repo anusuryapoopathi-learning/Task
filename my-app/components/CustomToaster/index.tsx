@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,11 +26,15 @@ export const CustomToaster: React.FC<CustomToasterProps> = ({
   duration = 3000,
   onHide,
 }) => {
-  const slideAnim = new Animated.Value(-100);
-  const opacityAnim = new Animated.Value(0);
+  const slideAnim = useRef(new Animated.Value(-100)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (visible) {
+    if (visible && message) {
+      // Reset to initial position
+      slideAnim.setValue(-100);
+      opacityAnim.setValue(0);
+      
       // Show animation
       Animated.parallel([
         Animated.timing(slideAnim, {
@@ -51,10 +55,10 @@ export const CustomToaster: React.FC<CustomToasterProps> = ({
       }, duration);
 
       return () => clearTimeout(timer);
-    } else {
+    } else if (!visible) {
       hideToast();
     }
-  }, [visible]);
+  }, [visible, message]);
 
   const hideToast = () => {
     Animated.parallel([
@@ -73,7 +77,7 @@ export const CustomToaster: React.FC<CustomToasterProps> = ({
     });
   };
 
-  if (!visible) return null;
+  if (!visible || !message) return null;
 
   const getIconName = (): keyof typeof Ionicons.glyphMap => {
     switch (type) {

@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth, useLogout, useUpdateEmail } from '@/api/auth';
 import { CustomButton } from '@/components/CustomButton';
-import { useAuth, useLogout } from '@/api/auth';
-import { getUsernameFromEmail, capitalizeUsername } from '@/utils/username';
+import { CustomToaster } from '@/components/CustomToaster';
+import { capitalizeUsername, getUsernameFromEmail } from '@/utils/username';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import {
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 export interface ProfileBottomSheetProps {
   visible: boolean;
@@ -28,8 +28,10 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
 }) => {
   const { data: user } = useAuth();
   const logoutMutation = useLogout();
+  const updateEmailMutation = useUpdateEmail();
   const [email, setEmail] = useState(user?.email || '');
   const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Update email when user changes
   useEffect(() => {
@@ -42,11 +44,46 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
     setIsEditingEmail(true);
   };
 
-  const handleSave = () => {
-    if (onSave) {
-      onSave(email);
+  const handleSave = async () => {
+    if (!user?.id) {
+      setToastMessage('User not found');
+      return;
     }
-    setIsEditingEmail(false);
+
+    if (!email || email.trim() === '') {
+      setToastMessage('Email cannot be empty');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setToastMessage('Please enter a valid email address');
+      return;
+    }
+
+    // Check if email changed
+    if (email === user.email) {
+      setIsEditingEmail(false);
+      return;
+    }
+
+    try {
+      await updateEmailMutation.mutateAsync({
+        userId: user.id,
+        newEmail: email.trim(),
+      });
+      
+      setIsEditingEmail(false);
+      setToastMessage('Email updated successfully');
+      
+      // Call onSave callback if provided
+      if (onSave) {
+        onSave(email.trim());
+      }
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : 'Failed to update email');
+    }
   };
 
   const handleCancel = () => {
@@ -186,6 +223,7 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
                       variant="gradient"
                       size="large"
                       containerStyle={styles.saveButton}
+                      disabled={updateEmailMutation.isPending}
                     />
                   </View>
                 </View>
@@ -194,6 +232,12 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
           </TouchableOpacity>
         </TouchableOpacity>
       </KeyboardAvoidingView>
+      <CustomToaster
+        visible={toastMessage !== null}
+        message={toastMessage || ''}
+        type={updateEmailMutation.isError ? 'error' : 'success'}
+        onHide={() => setToastMessage(null)}
+      />
     </Modal>
   );
 };

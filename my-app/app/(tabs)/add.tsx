@@ -4,10 +4,11 @@ import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { SimpleDropdown } from '@/components/CustomDropDrown/SimpleDropdown';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomPriorityStatus } from '@/components/CustomPriorityStatus';
+import { CustomToaster } from '@/components/CustomToaster';
 import { createTaskSchema } from '@/zod/TastCreateZod/createTask';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useState, useEffect, useCallback } from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -29,9 +30,43 @@ export default function CreateTaskScreen() {
   const [status, setStatus] = useState('');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Created date is set automatically
   const createdDate = new Date();
+
+  // Function to reset form to initial state
+  const resetForm = useCallback(() => {
+    setTitle('');
+    setDescription('');
+    setCategory('');
+    setPriority('');
+    setStatus('');
+    setDueDate(undefined);
+    setErrors({});
+  }, []);
+
+  // Clear form when screen is focused (when user navigates to this screen)
+  useFocusEffect(
+    useCallback(() => {
+      resetForm();
+    }, [resetForm])
+  );
+
+  // Handle mutation success/error for toast notifications
+  useEffect(() => {
+    if (createTaskMutation.isSuccess && createTaskMutation.data) {
+      setToastMessage('Task created successfully!');
+      // Clear form after successful creation
+      resetForm();
+    }
+  }, [createTaskMutation.isSuccess, createTaskMutation.data, resetForm]);
+
+  useEffect(() => {
+    if (createTaskMutation.isError) {
+      setToastMessage(createTaskMutation.error?.message || 'Failed to create task');
+    }
+  }, [createTaskMutation.isError, createTaskMutation.error]);
 
   const categoryOptions = [
     { label: 'Work', value: 'work' },
@@ -267,6 +302,14 @@ export default function CreateTaskScreen() {
           />
         </View>
       </View>
+
+      {/* Toast Notification */}
+      <CustomToaster
+        visible={toastMessage !== null}
+        message={toastMessage || ''}
+        type={createTaskMutation.isError ? 'error' : 'success'}
+        onHide={() => setToastMessage(null)}
+      />
     </View>
   );
 }

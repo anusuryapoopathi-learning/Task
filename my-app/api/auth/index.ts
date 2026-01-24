@@ -1,5 +1,5 @@
 import { delay } from '@/api/mock/delay';
-import { findUserByCredentials } from '@/api/mock/users';
+import { findUserByCredentials, updateUserEmail } from '@/api/mock/users';
 import { queryKeys } from '@/api/query-keys';
 import { asyncStorage, secureStore } from '@/lib/storage';
 import type { AuthError, LoginRequest, LoginResponse, User } from '@/types/auth';
@@ -74,6 +74,32 @@ export function useLogout() {
       queryClient.removeQueries({ queryKey: queryKeys.me.queryKey });
       // Navigate to login
       router.replace('/auth/login');
+    },
+  });
+}
+
+/**
+ * Update user email mutation
+ */
+export function useUpdateEmail() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Omit<User, 'password'>, Error, { userId: string; newEmail: string }>({
+    mutationFn: async ({ userId, newEmail }) => {
+      // Update email in mock API
+      const updatedUser = await updateUserEmail(userId, newEmail);
+
+      // Update user data in storage
+      await asyncStorage.setItem(USER_KEY, updatedUser);
+
+      return updatedUser;
+    },
+    onSuccess: (data) => {
+      // Update query cache
+      queryClient.setQueryData<Omit<User, 'password'> | null>(
+        queryKeys.me.queryKey,
+        data
+      );
     },
   });
 }

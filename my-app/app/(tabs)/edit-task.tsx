@@ -3,6 +3,7 @@ import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { SimpleDropdown } from '@/components/CustomDropDrown/SimpleDropdown';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomPriorityStatus } from '@/components/CustomPriorityStatus';
+import { CustomToaster } from '@/components/CustomToaster';
 import { createTaskSchema } from '@/zod/TastCreateZod/createTask';
 import { useTask, useUpdateTask } from '@/api/tasks';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,7 @@ export default function EditTaskScreen() {
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [createdDate, setCreatedDate] = useState<Date>(new Date());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Load task data when task is fetched
   useEffect(() => {
@@ -69,6 +71,19 @@ export default function EditTaskScreen() {
       setCreatedDate(createdDateObj);
     }
   }, [task]);
+
+  // Handle mutation success/error for toast notifications
+  useEffect(() => {
+    if (updateTaskMutation.isSuccess && updateTaskMutation.data) {
+      setToastMessage('Task updated successfully!');
+    }
+  }, [updateTaskMutation.isSuccess, updateTaskMutation.data]);
+
+  useEffect(() => {
+    if (updateTaskMutation.isError) {
+      setToastMessage(updateTaskMutation.error?.message || 'Failed to update task');
+    }
+  }, [updateTaskMutation.isError, updateTaskMutation.error]);
 
   const categoryOptions = [
     { label: 'Work', value: 'work' },
@@ -347,6 +362,14 @@ export default function EditTaskScreen() {
           />
         </View>
       </View>
+
+      {/* Toast Notification */}
+      <CustomToaster
+        visible={toastMessage !== null}
+        message={toastMessage || ''}
+        type={updateTaskMutation.isError ? 'error' : 'success'}
+        onHide={() => setToastMessage(null)}
+      />
     </View>
   );
 }

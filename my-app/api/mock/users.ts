@@ -1,4 +1,5 @@
 import type { User } from '@/types/auth';
+import { delay } from './delay';
 
 /**
  * Mocked users database
@@ -44,4 +45,23 @@ export function findUserByCredentials(
   return mockUsers.find(
     (user) => user.email === email && user.password === password
   );
+}
+
+/**
+ * Update user email
+ */
+export async function updateUserEmail(userId: string, newEmail: string): Promise<Omit<User, 'password'>> {
+  await delay(500); // Simulate network delay
+  
+  const userIndex = mockUsers.findIndex((user) => user.id === userId);
+  if (userIndex === -1) {
+    throw new Error('User not found');
+  }
+
+  // Update email in mock database
+  mockUsers[userIndex].email = newEmail;
+
+  // Return user without password
+  const { password, ...userWithoutPassword } = mockUsers[userIndex];
+  return userWithoutPassword;
 }
