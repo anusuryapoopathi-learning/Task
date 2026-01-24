@@ -18,6 +18,13 @@ export const mockUsers: User[] = [
     name: 'Admin User',
     role: 'admin',
   },
+  {
+    id: '3',
+    email: 'testing@gmail.com',
+    password: 'Test@123',
+    name: 'Testing User',
+    role: 'user',
+  },
 ];
 
 /**

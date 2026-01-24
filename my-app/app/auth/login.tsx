@@ -1,21 +1,26 @@
+import { useLogin } from '@/api/auth';
+import { CustomButton } from '@/components/CustomButton';
+import { CustomInput } from '@/components/CustomInput';
+import { CustomToaster } from '@/components/CustomToaster';
+import { signinZodSchema } from '@/zod/signinZod/signinZod';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { useLogin } from '@/api/auth';
-import { loginSchema } from '@/schemas/auth';
 import { z } from 'zod';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [showToast, setShowToast] = useState(false);
 
   const login = useLogin();
 
@@ -25,15 +30,18 @@ export default function LoginScreen() {
 
     try {
       // Validate with Zod
-      const validated = loginSchema.parse({ email, password });
+      const validated = signinZodSchema.parse({ email, password });
 
       // Attempt login
       await login.mutateAsync(validated);
+      
+      // Show success toast
+      setShowToast(true);
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Handle validation errors
         const fieldErrors: { email?: string; password?: string } = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0] === 'email') {
             fieldErrors.email = err.message;
           } else if (err.path[0] === 'password') {
@@ -50,141 +58,170 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.form}>
-        <Text style={styles.title}>Login</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.content}>
+        {/* App Icon */}
+        <View style={styles.iconContainer}>
+          <LinearGradient
+            colors={['#8B5CF6', '#3B82F6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconGradient}
+          >
+            <Ionicons name="checkmark" size={40} color="#fff" />
+          </LinearGradient>
+        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={[styles.input, errors.email && styles.inputError]}
+        {/* Welcome Message */}
+        <View style={styles.welcomeContainer}>
+          <Text style={styles.welcomeText}>
+            Welcome Back <Text style={styles.emoji}>👋</Text>
+          </Text>
+          <Text style={styles.subtitle}>
+            Sign in to continue managing your tasks
+          </Text>
+        </View>
+
+        {/* Form */}
+        <View style={styles.form}>
+          <CustomInput
+            label="Email"
             placeholder="Enter your email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (errors.email) {
+                setErrors({ ...errors, email: undefined });
+              }
+            }}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
             editable={!login.isPending}
+            error={errors.email}
+            containerStyle={styles.inputContainer}
           />
-          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={[styles.input, errors.password && styles.inputError]}
+          <CustomInput
+            label="Password"
             placeholder="Enter your password"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errors.password) {
+                setErrors({ ...errors, password: undefined });
+              }
+            }}
             secureTextEntry
+            showPasswordToggle
             autoCapitalize="none"
             autoComplete="password"
             editable={!login.isPending}
+            error={errors.password}
+            containerStyle={styles.inputContainer}
           />
-          {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
+          <CustomButton
+            title="Sign In"
+            onPress={handleLogin}
+            variant="gradient"
+            size="large"
+            fullWidth
+            loading={login.isPending}
+            disabled={login.isPending}
+            containerStyle={styles.signInButton}
+          />
         </View>
 
-        <TouchableOpacity
-          style={[styles.button, login.isPending && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={login.isPending}
-        >
-          {login.isPending ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Login</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.infoContainer}>
-          <Text style={styles.infoTitle}>Test Credentials:</Text>
-          <Text style={styles.infoText}>user@example.com / password123</Text>
-          <Text style={styles.infoText}>admin@example.com / admin123</Text>
+        {/* Sign Up Link */}
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => Alert.alert('Sign Up', 'Sign up functionality coming soon')}>
+            <Text style={styles.signUpLink}>Sign up</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </View>
+
+      {/* Toast Notification */}
+      <CustomToaster
+        visible={showToast}
+        message="Login successfully"
+        type="success"
+        duration={3000}
+        onHide={() => setShowToast(false)}
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fff',
+  },
+  contentContainer: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 24,
     justifyContent: 'center',
-    padding: 20,
+  },
+  iconContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  iconGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  welcomeContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  welcomeText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  emoji: {
+    fontSize: 32,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
   },
   form: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 32,
-    textAlign: 'center',
-    color: '#333',
+    marginBottom: 24,
   },
   inputContainer: {
     marginBottom: 20,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  inputError: {
-    borderColor: '#e74c3c',
-  },
-  errorText: {
-    color: '#e74c3c',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
+  signInButton: {
     marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  infoContainer: {
+  signUpContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: 24,
-    padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
   },
-  infoTitle: {
+  signUpText: {
     fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#666',
+    color: '#6B7280',
   },
-  infoText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+  signUpLink: {
+    fontSize: 14,
+    color: '#3B82F6',
+    fontWeight: '600',
   },
 });

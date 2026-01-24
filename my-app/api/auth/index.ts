@@ -1,10 +1,10 @@
+import { delay } from '@/api/mock/delay';
+import { findUserByCredentials } from '@/api/mock/users';
+import { queryKeys } from '@/api/query-keys';
+import { asyncStorage, secureStore } from '@/lib/storage';
+import type { AuthError, LoginRequest, LoginResponse, User } from '@/types/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { queryKeys } from '@/api/query-keys';
-import { findUserByCredentials } from '@/api/mock/users';
-import { delay } from '@/api/mock/delay';
-import { secureStore, asyncStorage } from '@/lib/storage';
-import type { LoginRequest, LoginResponse, AuthError, User } from '@/types/auth';
 
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
@@ -45,9 +45,12 @@ export function useLogin() {
     },
     onSuccess: (data) => {
       // Update query cache
-      queryClient.setQueryData(queryKeys.me.queryKey, data.user);
-      // Navigate to profile or home
-      router.replace('/(tabs)');
+      queryClient.setQueryData<Omit<User, 'password'> | null>(
+        queryKeys.me.queryKey,
+        data.user
+      );
+      // Navigate to welcome screen
+      router.replace('/welcome');
     },
   });
 }
@@ -68,7 +71,7 @@ export function useLogout() {
     },
     onSuccess: () => {
       // Clear query cache
-      queryClient.removeQueries({ queryKey: queryKeys.me._def });
+      queryClient.removeQueries({ queryKey: queryKeys.me.queryKey });
       // Navigate to login
       router.replace('/auth/login');
     },
@@ -79,7 +82,7 @@ export function useLogout() {
  * Get current authenticated user
  */
 export function useAuth() {
-  return useQuery<User | null>({
+  return useQuery<Omit<User, 'password'> | null>({
     queryKey: queryKeys.me.queryKey,
     queryFn: async () => {
       // Check if token exists
@@ -89,7 +92,7 @@ export function useAuth() {
       }
 
       // Get user from storage
-      const user = await asyncStorage.getItem<User>(USER_KEY);
+      const user = await asyncStorage.getItem<Omit<User, 'password'>>(USER_KEY);
       return user || null;
     },
     staleTime: Infinity, // User data doesn't change often

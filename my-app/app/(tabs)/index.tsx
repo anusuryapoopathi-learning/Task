@@ -1,98 +1,270 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useAuth } from '@/api/auth';
+import { useTasks } from '@/api/tasks';
+import { ProfileBottomSheet } from '@/components/ProfileBottomSheet';
+import { TaskCard } from '@/components/TaskCard';
+import { capitalizeUsername, getUsernameFromEmail } from '@/utils/username';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
+  const { data: user } = useAuth();
+  const { data: allTasks = [], isLoading } = useTasks();
+  const [profileSheetVisible, setProfileSheetVisible] = useState(false);
 
-export default function HomeScreen() {
+  const username = user?.email ? capitalizeUsername(getUsernameFromEmail(user.email)) : 'User';
+  const displayName = user?.name || username;
+
+  // Filter tasks
+  const { todayTasks, recentlyAddedTasks, pendingTasks } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Today's Tasks: due date is today
+    const todayTasksList = allTasks.filter((task) => {
+      if (!task.dueDate) return false;
+      const dueDate = new Date(task.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate.getTime() === today.getTime();
+    });
+
+    // Recently Added: sort by createdDate (most recent first)
+    const recentlyAddedList = [...allTasks]
+      .filter((task) => task.createdDate)
+      .sort((a, b) => {
+        const dateA = a.createdDate ? new Date(a.createdDate).getTime() : 0;
+        const dateB = b.createdDate ? new Date(b.createdDate).getTime() : 0;
+        return dateB - dateA; // Most recent first
+      })
+      .slice(0, 10); // Show last 10 recently added
+
+    // Pending Tasks: due date exceeded AND status not completed
+    const pendingTasksList = allTasks.filter((task) => {
+      if (!task.dueDate) return false;
+      if (task.status === 'Completed') return false;
+      
+      const dueDate = new Date(task.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate.getTime() < today.getTime();
+    });
+
+    return {
+      todayTasks: todayTasksList,
+      recentlyAddedTasks: recentlyAddedList,
+      pendingTasks: pendingTasksList,
+    };
+  }, [allTasks]);
+
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
+      {/* Sticky Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.greetingContainer}>
+          <Text style={styles.greeting}>
+            {getGreeting()} <Text style={styles.emoji}>👋</Text>
+          </Text>
+          <Text style={styles.userName}>{displayName}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => setProfileSheetVisible(true)}
+        >
+          <View style={styles.profileIcon}>
+            <Ionicons name="person-outline" size={24} color="#8B5CF6" />
+          </View>
+        </TouchableOpacity>
+      </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading tasks...</Text>
+          </View>
+        ) : (
+          <>
+            {/* Today's Tasks Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="sunny-outline" size={20} color="#F59E0B" />
+                <Text style={styles.sectionTitle}>Today's Tasks</Text>
+              </View>
+              {todayTasks.length === 0 ? (
+                <Text style={styles.emptyText}>No tasks due today</Text>
+              ) : (
+                todayTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onPress={() => {
+                      router.push({
+                        pathname: '/(tabs)/task-details',
+                        params: { taskId: task.id },
+                      });
+                    }}
+                  />
+                ))
+              )}
+            </View>
+
+            {/* Recently Added Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="time-outline" size={20} color="#3B82F6" />
+                <Text style={styles.sectionTitle}>Recently Added</Text>
+              </View>
+              {recentlyAddedTasks.length === 0 ? (
+                <Text style={styles.emptyText}>No recent tasks</Text>
+              ) : (
+                recentlyAddedTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onPress={() => {
+                      router.push({
+                        pathname: '/(tabs)/task-details',
+                        params: { taskId: task.id },
+                      });
+                    }}
+                  />
+                ))
+              )}
+            </View>
+
+            {/* Pending Tasks Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="hourglass-outline" size={20} color="#6B7280" />
+                <Text style={styles.sectionTitle}>Pending Tasks</Text>
+              </View>
+              {pendingTasks.length === 0 ? (
+                <Text style={styles.emptyText}>No pending tasks</Text>
+              ) : (
+                pendingTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onPress={() => {
+                      router.push({
+                        pathname: '/(tabs)/task-details',
+                        params: { taskId: task.id },
+                      });
+                    }}
+                  />
+                ))
+              )}
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      {/* Profile Bottom Sheet */}
+      <ProfileBottomSheet
+        visible={profileSheetVisible}
+        onClose={() => setProfileSheetVisible(false)}
+        onSave={(email) => {
+          // In future, update email via API
+          console.log('Email updated:', email);
+        }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  greetingContainer: {
+    flex: 1,
+  },
+  greeting: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  emoji: {
+    fontSize: 14,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  profileButton: {
+    padding: 4,
+  },
+  profileIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3E8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 20,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 16,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
 });
