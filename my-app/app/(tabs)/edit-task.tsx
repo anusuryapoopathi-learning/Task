@@ -114,8 +114,13 @@ export default function EditTaskScreen() {
   useEffect(() => {
     if (updateTaskMutation.isSuccess && updateTaskMutation.data) {
       setToastMessage('Task updated successfully!');
+      // Reset form changes tracking after successful update
+      setHasChanges(false);
+      // Update initial values to current form values
+      const currentValues = methods.getValues();
+      setInitialValues(currentValues);
     }
-  }, [updateTaskMutation.isSuccess, updateTaskMutation.data]);
+  }, [updateTaskMutation.isSuccess, updateTaskMutation.data, methods]);
 
   useEffect(() => {
     if (updateTaskMutation.isError) {
@@ -126,6 +131,7 @@ export default function EditTaskScreen() {
   const onSubmit = (data: CreateTaskInput) => {
     if (!params.taskId) return;
 
+    // Don't update createdDate - keep the original
     updateTaskMutation.mutate({
       id: params.taskId,
       title: data.title,
@@ -134,7 +140,7 @@ export default function EditTaskScreen() {
       priority: data.priority,
       status: data.status,
       dueDate: data.dueDate,
-      createdDate: data.createdDate,
+      // createdDate should NOT be updated - it's read-only
     });
   };
 
@@ -186,6 +192,66 @@ export default function EditTaskScreen() {
     });
   };
 
+  // Set minimum date to today (prevent selecting past dates)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Track form changes to conditionally show save button
+  const [initialValues, setInitialValues] = useState<CreateTaskInput | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Store initial values when task is loaded
+  useEffect(() => {
+    if (task && !initialValues) {
+      const categoryValue = categoryMap[task.category || ''] || task.category || '';
+      const dueDateObj = task.dueDate
+        ? task.dueDate instanceof Date
+          ? task.dueDate
+          : new Date(task.dueDate)
+        : new Date();
+      const createdDateObj = task.createdDate
+        ? task.createdDate instanceof Date
+          ? task.createdDate
+          : new Date(task.createdDate)
+        : dueDateObj
+        ? new Date(dueDateObj.getTime() - 24 * 60 * 60 * 1000)
+        : new Date();
+
+      const initial = {
+        title: task.title,
+        description: task.description || '',
+        category: categoryValue,
+        priority: task.priority,
+        status: task.status,
+        dueDate: dueDateObj,
+        createdDate: createdDateObj,
+      };
+      setInitialValues(initial);
+    }
+  }, [task, initialValues]);
+
+  // Watch form values and compare with initial values
+  const formValues = methods.watch();
+  useEffect(() => {
+    if (initialValues) {
+      const changed = Object.keys(initialValues).some((key) => {
+        const formKey = key as keyof CreateTaskInput;
+        const initialValue = initialValues[formKey];
+        const currentValue = formValues[formKey];
+
+        // Special handling for dates
+        if (formKey === 'dueDate' || formKey === 'createdDate') {
+          const initialDate = initialValue instanceof Date ? initialValue : new Date(initialValue);
+          const currentDate = currentValue instanceof Date ? currentValue : new Date(currentValue);
+          return initialDate.getTime() !== currentDate.getTime();
+        }
+
+        return initialValue !== currentValue;
+      });
+      setHasChanges(changed);
+    }
+  }, [formValues, initialValues]);
+
   return (
     <FormProvider {...methods}>
       <View style={styles.container}>
@@ -214,6 +280,7 @@ export default function EditTaskScreen() {
                 priorityOptions={priorityOptions}
                 statusOptions={statusOptions}
                 createdDateFormatter={createdDateFormatter}
+                dueDateMinimumDate={item.type === 'dueDate' ? today : undefined}
                 containerStyle={styles.inputContainer}
               />
             )}
@@ -231,6 +298,7 @@ export default function EditTaskScreen() {
           submitTitle="Save Changes"
           isLoading={updateTaskMutation.isPending}
           isDisabled={updateTaskMutation.isPending}
+          showSubmit={hasChanges}
           bottomInset={insets.bottom}
         />
 

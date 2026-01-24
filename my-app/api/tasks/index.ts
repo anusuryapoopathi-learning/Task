@@ -159,17 +159,34 @@ export function useUpdateTask() {
     },
     onSuccess: (data) => {
       if (isOnline) {
-        // Invalidate all tasks and specific task
+        // Update the specific task in cache immediately
+        queryClient.setQueryData<Task | null>(
+          taskQueryKeys.detail(data.id).queryKey,
+          normalizeTaskDates([data as Task])[0]
+        );
+        
+        // Update the task in the all tasks list
+        queryClient.setQueryData<Task[]>(taskQueryKeys.all.queryKey, (old = []) => {
+          const normalizedData = normalizeTaskDates([data as Task])[0];
+          return normalizeTaskDates(old).map((task) => (task.id === data.id ? normalizedData : task));
+        });
+        
+        // Invalidate to refetch and ensure consistency
         queryClient.invalidateQueries({ queryKey: taskQueryKeys.all.queryKey });
         queryClient.invalidateQueries({
           queryKey: taskQueryKeys.detail(data.id).queryKey,
         });
+        
         // Delay navigation to allow toast to show
         setTimeout(() => {
           router.replace('/(tabs)/tasks');
         }, 2000);
       } else {
         // Optimistically update cache when offline
+        queryClient.setQueryData<Task | null>(
+          taskQueryKeys.detail(data.id).queryKey,
+          normalizeTaskDates([data as Task])[0]
+        );
         queryClient.setQueryData<Task[]>(taskQueryKeys.all.queryKey, (old = []) => {
           const normalizedData = normalizeTaskDates([data as Task])[0];
           return normalizeTaskDates(old).map((task) => (task.id === data.id ? normalizedData : task));

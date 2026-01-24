@@ -1,12 +1,12 @@
-import React from 'react';
-import { FormInput } from './FormInput';
-import { FormTextArea } from './FormTextArea';
-import { FormDropdown } from './FormDropdown';
-import { FormPriorityStatus } from './FormPriorityStatus';
-import { FormDatePicker } from './FormDatePicker';
-import { FormReadOnly } from './FormReadOnly';
 import type { DropdownOption } from '@/components/CustomDropDrown/SimpleDropdown';
 import type { PriorityStatusOption } from '@/components/CustomPriorityStatus';
+import React from 'react';
+import { FormDatePicker } from './FormDatePicker';
+import { FormDropdown } from './FormDropdown';
+import { FormInput } from './FormInput';
+import { FormPriorityStatus } from './FormPriorityStatus';
+import { FormReadOnly } from './FormReadOnly';
+import { FormTextArea } from './FormTextArea';
 
 export type TaskFormFieldType = 'title' | 'description' | 'category' | 'priority' | 'status' | 'dueDate' | 'createdDate';
 
@@ -32,6 +32,7 @@ export interface TaskFormFieldProps {
   // Due Date field props
   dueDateLabel?: string;
   dueDatePlaceholder?: string;
+  dueDateMinimumDate?: Date;
   // Created Date field props
   createdDateLabel?: string;
   createdDateFormatter?: (value: any) => string;
@@ -55,6 +56,7 @@ export const TaskFormField: React.FC<TaskFormFieldProps> = ({
   statusOptions = [],
   dueDateLabel = 'Due Date',
   dueDatePlaceholder = 'Select due date',
+  dueDateMinimumDate,
   createdDateLabel = 'Created Date',
   createdDateFormatter,
   containerStyle,
@@ -118,6 +120,7 @@ export const TaskFormField: React.FC<TaskFormFieldProps> = ({
           label={dueDateLabel}
           placeholder={dueDatePlaceholder}
           mode="date"
+          minimumDate={dueDateMinimumDate}
           containerStyle={containerStyle}
         />
       );

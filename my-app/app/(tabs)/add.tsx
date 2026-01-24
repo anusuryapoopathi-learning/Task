@@ -124,6 +124,10 @@ export default function CreateTaskScreen() {
     });
   };
 
+  // Set minimum date to today (prevent selecting past dates)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   return (
     <FormProvider {...methods}>
       <View style={styles.container}>
@@ -152,6 +156,7 @@ export default function CreateTaskScreen() {
                 priorityOptions={priorityOptions}
                 statusOptions={statusOptions}
                 createdDateFormatter={createdDateFormatter}
+                dueDateMinimumDate={item.type === 'dueDate' ? today : undefined}
                 containerStyle={styles.inputContainer}
               />
             )}

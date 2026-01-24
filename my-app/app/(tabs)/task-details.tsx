@@ -286,17 +286,19 @@ export default function TaskDetailsScreen() {
 
       {/* Sticky Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
-        <View style={styles.buttonContainer}>
-          <CustomButton
-            title="Edit Task"
-            onPress={handleEditTask}
-            variant="outline"
-            size="large"
-            leftIcon={<Ionicons name="pencil-outline" size={20} color="#6B7280" />}
-            containerStyle={styles.editButton}
-          />
-        </View>
-        <View style={styles.buttonContainer}>
+        {task.status !== 'Completed' && (
+          <View style={styles.buttonContainer}>
+            <CustomButton
+              title="Edit Task"
+              onPress={handleEditTask}
+              variant="outline"
+              size="large"
+              leftIcon={<Ionicons name="pencil-outline" size={20} color="#6B7280" />}
+              containerStyle={styles.editButton}
+            />
+          </View>
+        )}
+        <View style={[styles.buttonContainer, task.status === 'Completed' && styles.fullWidthButton]}>
           <CustomButton
             title="Mark Complete"
             onPress={handleMarkComplete}
@@ -425,6 +427,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   buttonContainer: {
+    flex: 1,
+  },
+  fullWidthButton: {
     flex: 1,
   },
   editButton: {

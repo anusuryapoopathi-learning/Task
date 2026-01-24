@@ -11,6 +11,7 @@ export interface TaskFormFooterProps {
   isDisabled?: boolean;
   containerStyle?: ViewStyle;
   bottomInset?: number;
+  showSubmit?: boolean; // Control whether submit button is visible
 }
 
 export const TaskFormFooter: React.FC<TaskFormFooterProps> = ({
@@ -22,10 +23,11 @@ export const TaskFormFooter: React.FC<TaskFormFooterProps> = ({
   isDisabled = false,
   containerStyle,
   bottomInset = 0,
+  showSubmit = true,
 }) => {
   return (
     <View style={[styles.footer, containerStyle, { paddingBottom: bottomInset }]}>
-      <View style={styles.buttonContainer}>
+      <View style={[styles.buttonContainer, !showSubmit && styles.fullWidthButton]}>
         <CustomButton
           title={cancelTitle}
           onPress={onCancel}
@@ -34,17 +36,19 @@ export const TaskFormFooter: React.FC<TaskFormFooterProps> = ({
           containerStyle={styles.cancelButton}
         />
       </View>
-      <View style={styles.buttonContainer}>
-        <CustomButton
-          title={submitTitle}
-          onPress={onSubmit}
-          variant="gradient"
-          size="large"
-          containerStyle={styles.submitButton}
-          loading={isLoading}
-          disabled={isDisabled || isLoading}
-        />
-      </View>
+      {showSubmit && (
+        <View style={styles.buttonContainer}>
+          <CustomButton
+            title={submitTitle}
+            onPress={onSubmit}
+            variant="gradient"
+            size="large"
+            containerStyle={styles.submitButton}
+            loading={isLoading}
+            disabled={isDisabled || isLoading}
+          />
+        </View>
+      )}
     </View>
   );
 };
@@ -59,6 +63,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   buttonContainer: {
+    flex: 1,
+  },
+  fullWidthButton: {
     flex: 1,
   },
   cancelButton: {
