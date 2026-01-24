@@ -179,7 +179,7 @@ export function useUpdateTask() {
         
         // Delay navigation to allow toast to show
         setTimeout(() => {
-          router.replace('/(tabs)/tasks');
+          router.replace('/(tabs)/tasks/tasks');
         }, 2000);
       } else {
         // Optimistically update cache when offline
@@ -193,7 +193,7 @@ export function useUpdateTask() {
         });
         // Delay navigation to allow toast to show
         setTimeout(() => {
-          router.replace('/(tabs)/tasks');
+          router.replace('/(tabs)/tasks/tasks');
         }, 2000);
       }
     },
@@ -236,7 +236,7 @@ export function useMarkTaskComplete() {
         });
         // Delay navigation to allow toast to show
         setTimeout(() => {
-          router.replace('/(tabs)/tasks');
+          router.replace('/(tabs)/tasks/tasks');
         }, 2000);
       } else {
         // Optimistically update cache when offline
@@ -247,7 +247,7 @@ export function useMarkTaskComplete() {
         });
         // Delay navigation to allow toast to show
         setTimeout(() => {
-          router.replace('/(tabs)/tasks');
+          router.replace('/(tabs)/tasks/tasks');
         }, 2000);
       }
     },

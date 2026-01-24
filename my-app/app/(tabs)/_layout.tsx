@@ -1,9 +1,8 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, Tabs } from 'expo-router';
+import React from 'react';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 export default function TabLayout() {
 
@@ -36,7 +35,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="add"
+        name="createTask/add"
         options={{
           title: '',
           tabBarIcon: () => (
@@ -56,7 +55,7 @@ export default function TabLayout() {
               <TouchableOpacity
                 style={styles.centerButtonWrapper}
                 activeOpacity={0.8}
-                onPress={() => router.push('/(tabs)/add')}
+                onPress={() => router.push('/(tabs)/createTask/add')}
               >
                 <LinearGradient
                   colors={['#8B5CF6', '#A78BFA']}
@@ -72,7 +71,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="tasks"
+        name="tasks/tasks"
         options={{
           title: 'Tasks',
           tabBarIcon: ({ color, focused }) => (
@@ -89,14 +88,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="task-details"
+        name="taskDetails/task-details"
         options={{
           href: null, // Hide from tab bar
           tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
-        name="edit-task"
+        name="editTask/edit-task"
         options={{
           href: null, // Hide from tab bar
           tabBarStyle: { display: 'none' },

@@ -176,7 +176,7 @@ export default function TasksScreen() {
                 task={task}
                 onPress={() => {
                   router.push({
-                    pathname: '/(tabs)/task-details',
+                    pathname: '/(tabs)/taskDetails/task-details',
                     params: { taskId: task.id },
                   });
                 }}
@@ -186,7 +186,7 @@ export default function TasksScreen() {
                 task={task}
                 onPress={() => {
                   router.push({
-                    pathname: '/(tabs)/task-details',
+                    pathname: '/(tabs)/taskDetails/task-details',
                     params: { taskId: task.id },
                   });
                 }}

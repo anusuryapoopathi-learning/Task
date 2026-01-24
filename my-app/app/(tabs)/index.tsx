@@ -122,7 +122,7 @@ export default function DashboardScreen() {
                     task={task}
                     onPress={() => {
                       router.push({
-                        pathname: '/(tabs)/task-details',
+                        pathname: '/(tabs)/taskDetails/task-details',
                         params: { taskId: task.id },
                       });
                     }}

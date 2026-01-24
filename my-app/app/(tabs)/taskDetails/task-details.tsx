@@ -148,7 +148,7 @@ export default function TaskDetailsScreen() {
 
   const handleEditTask = () => {
     router.push({
-      pathname: '/(tabs)/edit-task',
+      pathname: '/(tabs)/editTask/edit-task',
       params: { taskId: task.id },
     });
   };
