@@ -36,7 +36,7 @@ export default function DashboardScreen() {
   const displayName = user?.name || username;
 
   // Filter tasks
-  const { todayTasks, recentlyAddedTasks, pendingTasks } = useMemo(() => {
+  const { todayTasks, recentlyAddedTasks, pendingTasks, completedTasks } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -68,10 +68,21 @@ export default function DashboardScreen() {
       return dueDate.getTime() < today.getTime();
     });
 
+    // Completed Tasks: status is 'Completed', sorted by completion date (most recent first)
+    const completedTasksList = allTasks
+      .filter((task) => task.status === 'Completed')
+      .sort((a, b) => {
+        // Sort by dueDate or createdDate, most recent first
+        const dateA = a.dueDate ? new Date(a.dueDate).getTime() : (a.createdDate ? new Date(a.createdDate).getTime() : 0);
+        const dateB = b.dueDate ? new Date(b.dueDate).getTime() : (b.createdDate ? new Date(b.createdDate).getTime() : 0);
+        return dateB - dateA;
+      });
+
     return {
       todayTasks: todayTasksList,
       recentlyAddedTasks: recentlyAddedList,
       pendingTasks: pendingTasksList,
+      completedTasks: completedTasksList,
     };
   }, [allTasks]);
 
@@ -113,6 +124,7 @@ export default function DashboardScreen() {
             { type: 'section', title: "Today's Tasks", icon: 'sunny-outline', color: '#F59E0B', tasks: todayTasks, key: 'today' },
             { type: 'section', title: 'Recently Added', icon: 'time-outline', color: '#3B82F6', tasks: recentlyAddedTasks, key: 'recent' },
             { type: 'section', title: 'Pending Tasks', icon: 'hourglass-outline', color: '#6B7280', tasks: pendingTasks, key: 'pending' },
+            { type: 'section', title: 'Completed Tasks', icon: 'checkmark-circle-outline', color: '#10B981', tasks: completedTasks, key: 'completed' },
           ]}
           renderItem={({ item }) => (
             <View style={styles.section}>
@@ -125,6 +137,7 @@ export default function DashboardScreen() {
                   {item.key === 'today' && 'No tasks due today'}
                   {item.key === 'recent' && 'No recent tasks'}
                   {item.key === 'pending' && 'No pending tasks'}
+                  {item.key === 'completed' && 'No completed tasks'}
                 </Text>
               ) : (
                 item.tasks.map((task) => (

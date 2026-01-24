@@ -1,4 +1,5 @@
 import { useCreateTask } from '@/api/tasks';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CustomToaster } from '@/components/CustomToaster';
 import { TaskFormField } from '@/components/FormFields';
 import { TaskFormFooter } from '@/components/TaskFormFooter';
@@ -10,7 +11,7 @@ import {
     PRIORITY_OPTIONS,
     STATUS_OPTIONS,
 } from '@/constants/taskOptions';
-import { formatDateToUK, getTodayStartOfDay } from '@/utils/dateFormatter';
+import { formatDateToUK, getTodayStartOfDay, normalizeDate } from '@/utils/dateFormatter';
 import type { CreateTaskInput } from '@/zod/TastCreateZod/createTask';
 import { createTaskSchema } from '@/zod/TastCreateZod/createTask';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,8 @@ export default function CreateTaskScreen() {
   const insets = useSafeAreaInsets();
   const createTaskMutation = useCreateTask();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const defaultFormValues = useMemo<CreateTaskInput>(() => ({
     title: '',
@@ -62,9 +65,10 @@ export default function CreateTaskScreen() {
   useEffect(() => {
     if (createTaskMutation.isSuccess && createTaskMutation.data) {
       setToastMessage('Task created successfully!');
-      reset(); // Auto-reset form after success
+      reset(defaultFormValues); // Auto-reset form after success
+      setHasChanges(false); // Reset changes flag
     }
-  }, [createTaskMutation.isSuccess, createTaskMutation.data, reset]);
+  }, [createTaskMutation.isSuccess, createTaskMutation.data, reset, defaultFormValues]);
 
   useEffect(() => {
     if (createTaskMutation.isError) {
@@ -85,12 +89,65 @@ export default function CreateTaskScreen() {
   }, [createTaskMutation]);
 
   const handleCancel = useCallback(() => {
+    if (hasChanges) {
+      setShowConfirmDialog(true);
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [hasChanges]);
+
+  const handleBackButton = useCallback(() => {
+    if (hasChanges) {
+      setShowConfirmDialog(true);
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [hasChanges]);
+
+  const handleConfirmDiscard = useCallback(() => {
+    setShowConfirmDialog(false);
+    // Reset form to default values before navigating back
+    reset(defaultFormValues);
+    setHasChanges(false);
     router.replace('/(tabs)');
+  }, [defaultFormValues, reset]);
+
+  const handleCancelDiscard = useCallback(() => {
+    setShowConfirmDialog(false);
   }, []);
 
-  const createdDateFormatter = useCallback((value: Date | string | null | undefined): string => {
-    return formatDateToUK(value);
+  const createdDateFormatter = useCallback((value: unknown): string => {
+    return formatDateToUK(value as Date | string | null | undefined);
   }, []);
+
+  // Track form changes by comparing with default values
+  const formValues = methods.watch();
+  useEffect(() => {
+    const hasFormChanges = Object.keys(defaultFormValues).some((key) => {
+      const formKey = key as keyof CreateTaskInput;
+      const defaultValue = defaultFormValues[formKey];
+      const currentValue = formValues[formKey];
+
+      // Special handling for dates
+      if (formKey === 'dueDate' || formKey === 'createdDate') {
+        const defaultDate = normalizeDate(defaultValue as Date | string | null | undefined);
+        const currentDate = normalizeDate(currentValue as Date | string | null | undefined);
+        return defaultDate.getTime() !== currentDate.getTime();
+      }
+
+      // Check if field has been filled (not empty/default)
+      if (formKey === 'title' || formKey === 'description') {
+        return (currentValue as string)?.trim() !== '';
+      }
+
+      if (formKey === 'category') {
+        return (currentValue as string) !== '';
+      }
+
+      return defaultValue !== currentValue;
+    });
+    setHasChanges(hasFormChanges);
+  }, [formValues, defaultFormValues]);
 
   // Set minimum date to today (prevent selecting past dates)
   const today = useMemo(() => getTodayStartOfDay(), []);
@@ -100,7 +157,7 @@ export default function CreateTaskScreen() {
       <View style={styles.container}>
         {/* Sticky Header */}
         <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackButton}>
             <Ionicons name="arrow-back" size={24} color="#1F2937" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Create Task</Text>
@@ -150,6 +207,16 @@ export default function CreateTaskScreen() {
           message={toastMessage || ''}
           type={createTaskMutation.isError ? 'error' : 'success'}
           onHide={() => setToastMessage(null)}
+        />
+
+        {/* Confirm Dialog */}
+        <ConfirmDialog
+          visible={showConfirmDialog}
+          message="Are you sure want to leave this screen? Your changes won't save yet"
+          onConfirm={handleConfirmDiscard}
+          onCancel={handleCancelDiscard}
+          confirmText="OK"
+          cancelText="Cancel"
         />
       </View>
     </FormProvider>

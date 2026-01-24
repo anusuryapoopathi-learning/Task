@@ -1,4 +1,5 @@
 import { useTask, useUpdateTask } from '@/api/tasks';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CustomToaster } from '@/components/CustomToaster';
 import { TaskFormField } from '@/components/FormFields';
 import { TaskFormFooter } from '@/components/TaskFormFooter';
@@ -37,6 +38,11 @@ export default function EditTaskScreen() {
   const { data: task, isLoading } = useTask(params.taskId || '');
   const updateTaskMutation = useUpdateTask();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  
+  // Track form changes to conditionally show save button and confirmation dialog
+  const [initialValues, setInitialValues] = useState<CreateTaskInput | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const methods = useForm<CreateTaskInput>({
     resolver: zodResolver(createTaskSchema),
@@ -64,7 +70,7 @@ export default function EditTaskScreen() {
         ? new Date(dueDateObj.getTime() - MILLISECONDS_PER_DAY)
         : new Date();
 
-      reset({
+      const taskValues = {
         title: task.title,
         description: task.description || '',
         category: categoryValue,
@@ -72,7 +78,11 @@ export default function EditTaskScreen() {
         status: task.status,
         dueDate: dueDateObj,
         createdDate: createdDateObj,
-      });
+      };
+
+      reset(taskValues);
+      // Reset hasChanges when task data is loaded/reset
+      setHasChanges(false);
     }
   }, [task, reset]);
 
@@ -111,7 +121,33 @@ export default function EditTaskScreen() {
   }, [params.taskId, updateTaskMutation]);
 
   const handleCancel = useCallback(() => {
+    if (hasChanges) {
+      setShowConfirmDialog(true);
+    } else {
+      router.back();
+    }
+  }, [hasChanges]);
+
+  const handleBackButton = useCallback(() => {
+    if (hasChanges) {
+      setShowConfirmDialog(true);
+    } else {
+      router.back();
+    }
+  }, [hasChanges]);
+
+  const handleConfirmDiscard = useCallback(() => {
+    setShowConfirmDialog(false);
+    // Reset form to initial values before navigating back
+    if (initialValues) {
+      reset(initialValues);
+      setHasChanges(false);
+    }
     router.back();
+  }, [initialValues, reset]);
+
+  const handleCancelDiscard = useCallback(() => {
+    setShowConfirmDialog(false);
   }, []);
 
   if (isLoading) {
@@ -149,20 +185,16 @@ export default function EditTaskScreen() {
     );
   }
 
-  const createdDateFormatter = useCallback((value: Date | string | null | undefined): string => {
-    return formatDateToUK(value);
+  const createdDateFormatter = useCallback((value: unknown): string => {
+    return formatDateToUK(value as Date | string | null | undefined);
   }, []);
 
   // Set minimum date to today (prevent selecting past dates)
   const today = useMemo(() => getTodayStartOfDay(), []);
 
-  // Track form changes to conditionally show save button
-  const [initialValues, setInitialValues] = useState<CreateTaskInput | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
-
-  // Store initial values when task is loaded
+  // Store initial values when task is loaded (reset when task changes)
   useEffect(() => {
-    if (task && !initialValues) {
+    if (task) {
       const categoryValue = CATEGORY_MAP_TO_FORM[task.category || ''] || task.category || '';
       const dueDateObj = normalizeDate(task.dueDate);
       const createdDateObj = task.createdDate
@@ -181,8 +213,9 @@ export default function EditTaskScreen() {
         createdDate: createdDateObj,
       };
       setInitialValues(initial);
+      setHasChanges(false);
     }
-  }, [task, initialValues]);
+  }, [task]);
 
   // Watch form values and compare with initial values
   const formValues = methods.watch();
@@ -211,7 +244,7 @@ export default function EditTaskScreen() {
       <View style={styles.container}>
         {/* Sticky Header */}
         <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackButton}>
             <Ionicons name="arrow-back" size={24} color="#1F2937" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Task</Text>
@@ -262,6 +295,16 @@ export default function EditTaskScreen() {
           message={toastMessage || ''}
           type={updateTaskMutation.isError ? 'error' : 'success'}
           onHide={() => setToastMessage(null)}
+        />
+
+        {/* Confirm Dialog */}
+        <ConfirmDialog
+          visible={showConfirmDialog}
+          message="Are you sure want to go back? If you gave changes won't save"
+          onConfirm={handleConfirmDiscard}
+          onCancel={handleCancelDiscard}
+          confirmText="OK"
+          cancelText="Cancel"
         />
       </View>
     </FormProvider>
