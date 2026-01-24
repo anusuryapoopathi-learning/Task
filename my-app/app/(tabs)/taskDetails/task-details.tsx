@@ -3,9 +3,10 @@ import { CustomButton } from '@/components/CustomButton';
 import { CustomToaster } from '@/components/CustomToaster';
 import { DetailCard } from '@/components/DetailCard';
 import type { TaskPriority, TaskStatus } from '@/components/TaskCard';
+import { TASK_DETAIL_SECTIONS, type TaskDetailSection } from '@/constants/taskDetailFields';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -36,6 +37,16 @@ export default function TaskDetailsScreen() {
       setToastMessage(markCompleteMutation.error?.message || 'Failed to mark task as complete');
     }
   }, [markCompleteMutation.isError, markCompleteMutation.error]);
+
+  // Created date - use task's createdDate or fallback
+  const createdDate = useMemo(() => {
+    if (!task) return new Date();
+    return task.createdDate
+      ? new Date(task.createdDate)
+      : task.dueDate
+      ? new Date((task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate)).getTime() - 24 * 60 * 60 * 1000)
+      : new Date();
+  }, [task]);
 
   if (isLoading) {
     return (
@@ -159,12 +170,100 @@ export default function TaskDetailsScreen() {
     }
   };
 
-  // Created date - use task's createdDate or fallback
-  const createdDate = task.createdDate
-    ? new Date(task.createdDate)
-    : task.dueDate
-    ? new Date((task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate)).getTime() - 24 * 60 * 60 * 1000)
-    : new Date();
+  // Render detail section based on type
+  const renderDetailSection = (item: TaskDetailSection) => {
+    if (!task) return null;
+
+    switch (item.type) {
+      case 'title':
+        return (
+          <View style={styles.titleSection}>
+            <Text style={styles.taskTitle}>{task.title}</Text>
+            <View
+              style={[
+                styles.priorityBadge,
+                { backgroundColor: getPriorityColor(task.priority) },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.priorityText,
+                  { color: getPriorityTextColor(task.priority) },
+                ]}
+              >
+                {task.priority}
+              </Text>
+            </View>
+          </View>
+        );
+      case 'status':
+        return (
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(task.status) },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusTextColor(task.status) },
+              ]}
+            >
+              {task.status}
+            </Text>
+          </View>
+        );
+      case 'description':
+        return (
+          <View style={styles.descriptionCard}>
+            <Text style={styles.descriptionLabel}>Description</Text>
+            <Text style={styles.descriptionText}>
+              {task.description || 'No description provided'}
+            </Text>
+          </View>
+        );
+      case 'details':
+        return (
+          <View style={styles.detailsGrid}>
+            <View style={styles.gridRow}>
+              <View style={styles.gridItem}>
+                <DetailCard
+                  icon="pricetag-outline"
+                  label="Category"
+                  value={task.category || 'Not set'}
+                />
+              </View>
+              <View style={styles.gridItem}>
+                <DetailCard
+                  icon="flag-outline"
+                  label="Priority"
+                  value={task.priority}
+                />
+              </View>
+            </View>
+            <View style={styles.gridRow}>
+              <View style={styles.gridItem}>
+                <DetailCard
+                  icon="calendar-outline"
+                  label="Due Date"
+                  value={formatDate(task.dueDate)}
+                />
+              </View>
+              <View style={styles.gridItem}>
+                <DetailCard
+                  icon="time-outline"
+                  label="Created"
+                  value={formatDate(createdDate)}
+                />
+              </View>
+            </View>
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -182,103 +281,8 @@ export default function TaskDetailsScreen() {
 
       {/* Scrollable Content */}
       <FlatList
-        data={[
-          { type: 'title', key: 'title' },
-          { type: 'status', key: 'status' },
-          { type: 'description', key: 'description' },
-          { type: 'details', key: 'details' },
-        ]}
-        renderItem={({ item }) => {
-          switch (item.type) {
-            case 'title':
-              return (
-                <View style={styles.titleSection}>
-                  <Text style={styles.taskTitle}>{task.title}</Text>
-                  <View
-                    style={[
-                      styles.priorityBadge,
-                      { backgroundColor: getPriorityColor(task.priority) },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.priorityText,
-                        { color: getPriorityTextColor(task.priority) },
-                      ]}
-                    >
-                      {task.priority}
-                    </Text>
-                  </View>
-                </View>
-              );
-            case 'status':
-              return (
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(task.status) },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: getStatusTextColor(task.status) },
-                    ]}
-                  >
-                    {task.status}
-                  </Text>
-                </View>
-              );
-            case 'description':
-              return (
-                <View style={styles.descriptionCard}>
-                  <Text style={styles.descriptionLabel}>Description</Text>
-                  <Text style={styles.descriptionText}>
-                    {task.description || 'No description provided'}
-                  </Text>
-                </View>
-              );
-            case 'details':
-              return (
-                <View style={styles.detailsGrid}>
-                  <View style={styles.gridRow}>
-                    <View style={styles.gridItem}>
-                      <DetailCard
-                        icon="pricetag-outline"
-                        label="Category"
-                        value={task.category || 'Not set'}
-                      />
-                    </View>
-                    <View style={styles.gridItem}>
-                      <DetailCard
-                        icon="flag-outline"
-                        label="Priority"
-                        value={task.priority}
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.gridRow}>
-                    <View style={styles.gridItem}>
-                      <DetailCard
-                        icon="calendar-outline"
-                        label="Due Date"
-                        value={formatDate(task.dueDate)}
-                      />
-                    </View>
-                    <View style={styles.gridItem}>
-                      <DetailCard
-                        icon="time-outline"
-                        label="Created"
-                        value={formatDate(createdDate)}
-                      />
-                    </View>
-                  </View>
-                </View>
-              );
-            default:
-              return null;
-          }
-        }}
+        data={TASK_DETAIL_SECTIONS}
+        renderItem={({ item }) => renderDetailSection(item)}
         keyExtractor={(item) => item.key}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
