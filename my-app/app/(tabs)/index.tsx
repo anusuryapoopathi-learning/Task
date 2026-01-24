@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-    ScrollView,
+    FlatList,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -92,27 +92,31 @@ export default function DashboardScreen() {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading tasks...</Text>
-          </View>
-        ) : (
-          <>
-            {/* Today's Tasks Section */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading tasks...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={[
+            { type: 'section', title: "Today's Tasks", icon: 'sunny-outline', color: '#F59E0B', tasks: todayTasks, key: 'today' },
+            { type: 'section', title: 'Recently Added', icon: 'time-outline', color: '#3B82F6', tasks: recentlyAddedTasks, key: 'recent' },
+            { type: 'section', title: 'Pending Tasks', icon: 'hourglass-outline', color: '#6B7280', tasks: pendingTasks, key: 'pending' },
+          ]}
+          renderItem={({ item }) => (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Ionicons name="sunny-outline" size={20} color="#F59E0B" />
-                <Text style={styles.sectionTitle}>Today's Tasks</Text>
+                <Ionicons name={item.icon as any} size={20} color={item.color} />
+                <Text style={styles.sectionTitle}>{item.title}</Text>
               </View>
-              {todayTasks.length === 0 ? (
-                <Text style={styles.emptyText}>No tasks due today</Text>
+              {item.tasks.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  {item.key === 'today' && 'No tasks due today'}
+                  {item.key === 'recent' && 'No recent tasks'}
+                  {item.key === 'pending' && 'No pending tasks'}
+                </Text>
               ) : (
-                todayTasks.map((task) => (
+                item.tasks.map((task: any) => (
                   <TaskCard
                     key={task.id}
                     task={task}
@@ -126,57 +130,12 @@ export default function DashboardScreen() {
                 ))
               )}
             </View>
-
-            {/* Recently Added Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="time-outline" size={20} color="#3B82F6" />
-                <Text style={styles.sectionTitle}>Recently Added</Text>
-              </View>
-              {recentlyAddedTasks.length === 0 ? (
-                <Text style={styles.emptyText}>No recent tasks</Text>
-              ) : (
-                recentlyAddedTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onPress={() => {
-                      router.push({
-                        pathname: '/(tabs)/task-details',
-                        params: { taskId: task.id },
-                      });
-                    }}
-                  />
-                ))
-              )}
-            </View>
-
-            {/* Pending Tasks Section */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Ionicons name="hourglass-outline" size={20} color="#6B7280" />
-                <Text style={styles.sectionTitle}>Pending Tasks</Text>
-              </View>
-              {pendingTasks.length === 0 ? (
-                <Text style={styles.emptyText}>No pending tasks</Text>
-              ) : (
-                pendingTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onPress={() => {
-                      router.push({
-                        pathname: '/(tabs)/task-details',
-                        params: { taskId: task.id },
-                      });
-                    }}
-                  />
-                ))
-              )}
-            </View>
-          </>
-        )}
-      </ScrollView>
+          )}
+          keyExtractor={(item) => item.key}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       {/* Profile Bottom Sheet */}
       <ProfileBottomSheet
@@ -228,9 +187,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3E8FF',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  scrollView: {
-    flex: 1,
   },
   scrollContent: {
     padding: 20,

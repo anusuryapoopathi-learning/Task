@@ -8,9 +8,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
     Alert,
+    FlatList,
     KeyboardAvoidingView,
     Platform,
-    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -68,97 +68,101 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 20}
       >
-        <ScrollView
-          style={styles.scrollView}
+        <FlatList
+          data={[{ type: 'content', key: 'content' }]}
+          renderItem={() => (
+            <View style={styles.content}>
+              {/* App Icon */}
+              <View style={styles.iconContainer}>
+                <LinearGradient
+                  colors={['#8B5CF6', '#3B82F6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.iconGradient}
+                >
+                  <Ionicons name="checkmark" size={40} color="#fff" />
+                </LinearGradient>
+              </View>
+
+              {/* Welcome Message */}
+              <View style={styles.welcomeContainer}>
+                <Text style={styles.welcomeText}>
+                  Welcome Back <Text style={styles.emoji}>👋</Text>
+                </Text>
+                <Text style={styles.subtitle}>
+                  Sign in to continue managing your tasks
+                </Text>
+              </View>
+
+              {/* Form */}
+              <View style={styles.form}>
+                <CustomInput
+                  label="Email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (errors.email) {
+                      setErrors({ ...errors, email: undefined });
+                    }
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  editable={!login.isPending}
+                  error={errors.email}
+                  containerStyle={styles.inputContainer}
+                />
+
+                <CustomInput
+                  label="Password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    if (errors.password) {
+                      setErrors({ ...errors, password: undefined });
+                    }
+                  }}
+                  secureTextEntry
+                  showPasswordToggle
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  editable={!login.isPending}
+                  error={errors.password}
+                  containerStyle={styles.inputContainer}
+                />
+
+                <CustomButton
+                  title="Sign In"
+                  onPress={handleLogin}
+                  variant="gradient"
+                  size="large"
+                  fullWidth
+                  loading={login.isPending}
+                  disabled={login.isPending}
+                  containerStyle={styles.signInButton}
+                />
+              </View>
+
+              {/* Sign Up Link */}
+              <View style={styles.signUpContainer}>
+                <Text style={styles.signUpText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => Alert.alert('Sign Up', 'Sign up functionality coming soon')}>
+                  <Text style={styles.signUpLink}>Sign up</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          keyExtractor={(item) => item.key}
           contentContainerStyle={[
             styles.contentContainer,
             { paddingBottom: Math.max(insets.bottom, 40) },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.content}>
-        {/* App Icon */}
-        <View style={styles.iconContainer}>
-          <LinearGradient
-            colors={['#8B5CF6', '#3B82F6']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconGradient}
-          >
-            <Ionicons name="checkmark" size={40} color="#fff" />
-          </LinearGradient>
-        </View>
-
-        {/* Welcome Message */}
-        <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeText}>
-            Welcome Back <Text style={styles.emoji}>👋</Text>
-          </Text>
-          <Text style={styles.subtitle}>
-            Sign in to continue managing your tasks
-          </Text>
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          <CustomInput
-            label="Email"
-            placeholder="Enter your email"
-            value={email}
-            onChangeText={(text) => {
-              setEmail(text);
-              if (errors.email) {
-                setErrors({ ...errors, email: undefined });
-              }
-            }}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            editable={!login.isPending}
-            error={errors.email}
-            containerStyle={styles.inputContainer}
-          />
-
-          <CustomInput
-            label="Password"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              if (errors.password) {
-                setErrors({ ...errors, password: undefined });
-              }
-            }}
-            secureTextEntry
-            showPasswordToggle
-            autoCapitalize="none"
-            autoComplete="password"
-            editable={!login.isPending}
-            error={errors.password}
-            containerStyle={styles.inputContainer}
-          />
-
-          <CustomButton
-            title="Sign In"
-            onPress={handleLogin}
-            variant="gradient"
-            size="large"
-            fullWidth
-            loading={login.isPending}
-            disabled={login.isPending}
-            containerStyle={styles.signInButton}
-          />
-        </View>
-
-        {/* Sign Up Link */}
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => Alert.alert('Sign Up', 'Sign up functionality coming soon')}>
-            <Text style={styles.signUpLink}>Sign up</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        />
+      </KeyboardAvoidingView>
 
       {/* Toast Notification */}
       <CustomToaster
@@ -168,8 +172,6 @@ export default function LoginScreen() {
         duration={3000}
         onHide={() => setShowToast(false)}
       />
-        </ScrollView>
-      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -180,9 +182,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   keyboardView: {
-    flex: 1,
-  },
-  scrollView: {
     flex: 1,
   },
   contentContainer: {

@@ -1,21 +1,20 @@
-import { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/api/auth';
 import { useTasks } from '@/api/tasks';
-import { TaskCard, type Task } from '@/components/TaskCard';
-import { TaskListView } from '@/components/TaskListView';
 import { ProfileBottomSheet } from '@/components/ProfileBottomSheet';
-import { getUsernameFromEmail, capitalizeUsername } from '@/utils/username';
+import { TaskCard } from '@/components/TaskCard';
+import { TaskListView } from '@/components/TaskListView';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ViewMode = 'cards' | 'list';
 
@@ -155,55 +154,49 @@ export default function TasksScreen() {
       )}
 
       {/* Scrollable Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {isLoading ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Loading tasks...</Text>
-          </View>
-        ) : filteredTasks.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={48} color="#9CA3AF" />
-            <Text style={styles.emptyText}>No tasks found</Text>
-            <Text style={styles.emptySubtext}>
-              {searchQuery.trim() ? 'Try adjusting your search query' : 'No tasks available'}
-            </Text>
-          </View>
-        ) : (
-          <>
-            {viewMode === 'cards' ? (
-              filteredTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/(tabs)/task-details',
-                      params: { taskId: task.id },
-                    });
-                  }}
-                />
-              ))
+      {isLoading ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyText}>Loading tasks...</Text>
+        </View>
+      ) : filteredTasks.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="search-outline" size={48} color="#9CA3AF" />
+          <Text style={styles.emptyText}>No tasks found</Text>
+          <Text style={styles.emptySubtext}>
+            {searchQuery.trim() ? 'Try adjusting your search query' : 'No tasks available'}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredTasks}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item: task }) =>
+            viewMode === 'cards' ? (
+              <TaskCard
+                task={task}
+                onPress={() => {
+                  router.push({
+                    pathname: '/(tabs)/task-details',
+                    params: { taskId: task.id },
+                  });
+                }}
+              />
             ) : (
-              filteredTasks.map((task) => (
-                <TaskListView
-                  key={task.id}
-                  task={task}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/(tabs)/task-details',
-                      params: { taskId: task.id },
-                    });
-                  }}
-                />
-              ))
-            )}
-          </>
-        )}
-      </ScrollView>
+              <TaskListView
+                task={task}
+                onPress={() => {
+                  router.push({
+                    pathname: '/(tabs)/task-details',
+                    params: { taskId: task.id },
+                  });
+                }}
+              />
+            )
+          }
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       {/* Profile Bottom Sheet */}
       <ProfileBottomSheet
@@ -310,9 +303,6 @@ const styles = StyleSheet.create({
   toggleTextActive: {
     color: '#1F2937',
     fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
   },
   scrollContent: {
     padding: 20,

@@ -1,16 +1,22 @@
+import { useTask, useUpdateTask } from '@/api/tasks';
 import { CustomButton } from '@/components/CustomButton';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { SimpleDropdown } from '@/components/CustomDropDrown/SimpleDropdown';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomPriorityStatus } from '@/components/CustomPriorityStatus';
 import { CustomToaster } from '@/components/CustomToaster';
+import type { CreateTaskInput } from '@/zod/TastCreateZod/createTask';
 import { createTaskSchema } from '@/zod/TastCreateZod/createTask';
-import { useTask, useUpdateTask } from '@/api/tasks';
 import { Ionicons } from '@expo/vector-icons';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import {
-    ScrollView,
+    ActivityIndicator,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
     StyleSheet,
     Text,
     TextInput,
@@ -18,49 +24,78 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { z } from 'zod';
-import type { Task } from '@/components/TaskCard';
+
+// Map category values to display names
+const categoryMap: Record<string, string> = {
+  'Work': 'work',
+  'Personal': 'personal',
+  'Interview Preparation': 'interview',
+  'Health & Fitness': 'health',
+  'Learning': 'learning',
+};
+
+const reverseCategoryMap: Record<string, string> = {
+  'work': 'Work',
+  'personal': 'Personal',
+  'interview': 'Interview Preparation',
+  'health': 'Health & Fitness',
+  'learning': 'Learning',
+};
+
+const categoryOptions = [
+  { label: 'Work', value: 'work' },
+  { label: 'Personal', value: 'personal' },
+  { label: 'Interview Preparation', value: 'interview' },
+  { label: 'Health & Fitness', value: 'health' },
+  { label: 'Learning', value: 'learning' },
+];
+
+const priorityOptions = [
+  { label: 'Low', value: 'Low', color: '#10B981' },
+  { label: 'Medium', value: 'Medium', color: '#F59E0B' },
+  { label: 'High', value: 'High', color: '#EF4444' },
+];
+
+const statusOptions = [
+  { label: 'Pending', value: 'Pending', color: '#6B7280' },
+  { label: 'In Progress', value: 'In Progress', color: '#3B82F6' },
+  { label: 'Completed', value: 'Completed', color: '#10B981' },
+];
 
 export default function EditTaskScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ taskId: string }>();
   const { data: task, isLoading } = useTask(params.taskId || '');
   const updateTaskMutation = useUpdateTask();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<string | number>('');
-  const [priority, setPriority] = useState('');
-  const [status, setStatus] = useState('');
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
-  const [createdDate, setCreatedDate] = useState<Date>(new Date());
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<CreateTaskInput>({
+    resolver: zodResolver(createTaskSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      category: '',
+      priority: 'Low',
+      status: 'Pending',
+      dueDate: new Date(),
+      createdDate: new Date(),
+    },
+  });
 
   // Load task data when task is fetched
   useEffect(() => {
     if (task) {
-      setTitle(task.title);
-      setDescription(task.description || '');
-      // Map category name to value
-      const categoryMap: Record<string, string> = {
-        'Work': 'work',
-        'Personal': 'personal',
-        'Interview Preparation': 'interview',
-        'Health & Fitness': 'health',
-        'Learning': 'learning',
-      };
       const categoryValue = categoryMap[task.category || ''] || task.category || '';
-      setCategory(categoryValue);
-      setPriority(task.priority);
-      setStatus(task.status);
-      // Handle both Date objects and date strings
       const dueDateObj = task.dueDate
         ? task.dueDate instanceof Date
           ? task.dueDate
           : new Date(task.dueDate)
-        : undefined;
-      setDueDate(dueDateObj);
-      // Set created date from task
+        : new Date();
       const createdDateObj = task.createdDate
         ? task.createdDate instanceof Date
           ? task.createdDate
@@ -68,9 +103,18 @@ export default function EditTaskScreen() {
         : dueDateObj
         ? new Date(dueDateObj.getTime() - 24 * 60 * 60 * 1000)
         : new Date();
-      setCreatedDate(createdDateObj);
+
+      reset({
+        title: task.title,
+        description: task.description || '',
+        category: categoryValue,
+        priority: task.priority,
+        status: task.status,
+        dueDate: dueDateObj,
+        createdDate: createdDateObj,
+      });
     }
-  }, [task]);
+  }, [task, reset]);
 
   // Handle mutation success/error for toast notifications
   useEffect(() => {
@@ -85,95 +129,37 @@ export default function EditTaskScreen() {
     }
   }, [updateTaskMutation.isError, updateTaskMutation.error]);
 
-  const categoryOptions = [
-    { label: 'Work', value: 'work' },
-    { label: 'Personal', value: 'personal' },
-    { label: 'Interview Preparation', value: 'interview' },
-    { label: 'Health & Fitness', value: 'health' },
-    { label: 'Learning', value: 'learning' },
-  ];
-
-  const priorityOptions = [
-    { label: 'Low', value: 'Low', color: '#10B981' },
-    { label: 'Medium', value: 'Medium', color: '#F59E0B' },
-    { label: 'High', value: 'High', color: '#EF4444' },
-  ];
-
-  const statusOptions = [
-    { label: 'Pending', value: 'Pending', color: '#6B7280' },
-    { label: 'In Progress', value: 'In Progress', color: '#3B82F6' },
-    { label: 'Completed', value: 'Completed', color: '#10B981' },
-  ];
-
-  const handleCancel = () => {
-    router.back(); // Go back to Details screen
-  };
-
-  const handleSaveChanges = () => {
+  const onSubmit = (data: CreateTaskInput) => {
     if (!params.taskId) return;
 
-    // Reset errors
-    setErrors({});
+    updateTaskMutation.mutate({
+      id: params.taskId,
+      title: data.title,
+      description: data.description,
+      category: reverseCategoryMap[data.category] || data.category,
+      priority: data.priority,
+      status: data.status,
+      dueDate: data.dueDate,
+      createdDate: data.createdDate,
+    });
+  };
 
-    try {
-      // Validate with Zod
-      const validated = createTaskSchema.parse({
-        title,
-        description,
-        category: String(category),
-        priority: priority as 'Low' | 'Medium' | 'High',
-        status: status as 'Pending' | 'In Progress' | 'Completed',
-        dueDate: dueDate || new Date(),
-        createdDate,
-      });
-
-      // Map category value to display name
-      const categoryMap: Record<string, string> = {
-        'work': 'Work',
-        'personal': 'Personal',
-        'interview': 'Interview Preparation',
-        'health': 'Health & Fitness',
-        'learning': 'Learning',
-      };
-
-      // Update task via API
-      updateTaskMutation.mutate({
-        id: params.taskId,
-        title: validated.title,
-        description: validated.description,
-        category: categoryMap[validated.category] || validated.category,
-        priority: validated.priority,
-        status: validated.status,
-        dueDate: validated.dueDate,
-        createdDate: validated.createdDate,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        // Handle validation errors
-        const fieldErrors: Record<string, string> = {};
-        error.issues.forEach((err) => {
-          const field = err.path[0] as string;
-          fieldErrors[field] = err.message;
-        });
-        setErrors(fieldErrors);
-      }
-    }
+  const handleCancel = () => {
+    router.back();
   };
 
   if (isLoading) {
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleCancel}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
             <Ionicons name="arrow-back" size={24} color="#1F2937" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Task</Text>
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#8B5CF6" />
           <Text style={styles.loadingText}>Loading task...</Text>
         </View>
       </View>
@@ -184,10 +170,7 @@ export default function EditTaskScreen() {
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleCancel}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
             <Ionicons name="arrow-back" size={24} color="#1F2937" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Task</Text>
@@ -204,10 +187,7 @@ export default function EditTaskScreen() {
     <View style={styles.container}>
       {/* Sticky Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleCancel}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Task</Text>
@@ -215,129 +195,166 @@ export default function EditTaskScreen() {
       </View>
 
       {/* Scrollable Form Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
-        {/* Task Title */}
-        <CustomInput
-          label="Task Title"
-          placeholder="Enter task title"
-          value={title}
-          onChangeText={(text) => {
-            setTitle(text);
-            if (errors.title) {
-              setErrors({ ...errors, title: '' });
+        <FlatList
+          data={[
+            { type: 'title', key: 'title' },
+            { type: 'description', key: 'description' },
+            { type: 'category', key: 'category' },
+            { type: 'priority', key: 'priority' },
+            { type: 'status', key: 'status' },
+            { type: 'dueDate', key: 'dueDate' },
+            { type: 'createdDate', key: 'createdDate' },
+          ]}
+          renderItem={({ item }) => {
+            switch (item.type) {
+              case 'title':
+                return (
+                  <Controller
+                    control={control}
+                    name="title"
+                    render={({ field: { onChange, value } }) => (
+                      <CustomInput
+                        label="Task Title"
+                        placeholder="Enter task title"
+                        value={value}
+                        onChangeText={onChange}
+                        error={errors.title?.message}
+                        containerStyle={styles.inputContainer}
+                      />
+                    )}
+                  />
+                );
+              case 'description':
+                return (
+                  <Controller
+                    control={control}
+                    name="description"
+                    render={({ field: { onChange, value } }) => (
+                      <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Description</Text>
+                        <TextInput
+                          style={[styles.textArea, errors.description && styles.inputError]}
+                          placeholder="Add notes or details"
+                          placeholderTextColor="#999"
+                          value={value}
+                          onChangeText={onChange}
+                          multiline
+                          numberOfLines={6}
+                          textAlignVertical="top"
+                        />
+                        {errors.description && (
+                          <Text style={styles.errorText}>{errors.description.message}</Text>
+                        )}
+                      </View>
+                    )}
+                  />
+                );
+              case 'category':
+                return (
+                  <Controller
+                    control={control}
+                    name="category"
+                    render={({ field: { onChange, value } }) => (
+                      <SimpleDropdown
+                        label="Category"
+                        placeholder="Select category"
+                        options={categoryOptions}
+                        value={value}
+                        onSelect={(option) => onChange(option.value)}
+                        error={errors.category?.message}
+                        containerStyle={styles.inputContainer}
+                      />
+                    )}
+                  />
+                );
+              case 'priority':
+                return (
+                  <Controller
+                    control={control}
+                    name="priority"
+                    render={({ field: { onChange, value } }) => (
+                      <CustomPriorityStatus
+                        label="Priority"
+                        options={priorityOptions}
+                        value={value}
+                        onValueChange={onChange}
+                        error={errors.priority?.message}
+                        containerStyle={styles.inputContainer}
+                      />
+                    )}
+                  />
+                );
+              case 'status':
+                return (
+                  <Controller
+                    control={control}
+                    name="status"
+                    render={({ field: { onChange, value } }) => (
+                      <CustomPriorityStatus
+                        label="Status"
+                        options={statusOptions}
+                        value={value}
+                        onValueChange={onChange}
+                        error={errors.status?.message}
+                        containerStyle={styles.inputContainer}
+                      />
+                    )}
+                  />
+                );
+              case 'dueDate':
+                return (
+                  <Controller
+                    control={control}
+                    name="dueDate"
+                    render={({ field: { onChange, value } }) => (
+                      <CustomDatePicker
+                        label="Due Date"
+                        placeholder="Select due date"
+                        value={value}
+                        onDateChange={onChange}
+                        mode="date"
+                        error={errors.dueDate?.message}
+                        containerStyle={styles.inputContainer}
+                      />
+                    )}
+                  />
+                );
+              case 'createdDate':
+                return (
+                  <Controller
+                    control={control}
+                    name="createdDate"
+                    render={({ field: { value } }) => (
+                      <View style={styles.inputContainer}>
+                        <Text style={styles.label}>Created Date</Text>
+                        <View style={styles.readOnlyInput}>
+                          <Text style={styles.readOnlyText}>
+                            {(value || new Date()).toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                            })}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  />
+                );
+              default:
+                return null;
             }
           }}
-          error={errors.title}
-          containerStyle={styles.inputContainer}
+          keyExtractor={(item) => item.key}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         />
-
-        {/* Description */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={[
-              styles.textArea,
-              errors.description && styles.inputError,
-            ]}
-            placeholder="Add notes or details"
-            placeholderTextColor="#999"
-            value={description}
-            onChangeText={(text) => {
-              setDescription(text);
-              if (errors.description) {
-                setErrors({ ...errors, description: '' });
-              }
-            }}
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-          />
-          {errors.description && (
-            <Text style={styles.errorText}>{errors.description}</Text>
-          )}
-        </View>
-
-        {/* Category */}
-        <SimpleDropdown
-          label="Category"
-          placeholder="Select category"
-          options={categoryOptions}
-          value={category}
-          onSelect={(option) => {
-            setCategory(option.value);
-            if (errors.category) {
-              setErrors({ ...errors, category: '' });
-            }
-          }}
-          error={errors.category}
-          containerStyle={styles.inputContainer}
-        />
-
-        {/* Priority */}
-        <CustomPriorityStatus
-          label="Priority"
-          options={priorityOptions}
-          value={priority}
-          onValueChange={(value) => {
-            setPriority(value);
-            if (errors.priority) {
-              setErrors({ ...errors, priority: '' });
-            }
-          }}
-          error={errors.priority}
-          containerStyle={styles.inputContainer}
-        />
-
-        {/* Status */}
-        <CustomPriorityStatus
-          label="Status"
-          options={statusOptions}
-          value={status}
-          onValueChange={(value) => {
-            setStatus(value);
-            if (errors.status) {
-              setErrors({ ...errors, status: '' });
-            }
-          }}
-          error={errors.status}
-          containerStyle={styles.inputContainer}
-        />
-
-        {/* Due Date */}
-        <CustomDatePicker
-          label="Due Date"
-          placeholder="Select due date"
-          value={dueDate}
-          onDateChange={(date) => {
-            setDueDate(date);
-            if (errors.dueDate) {
-              setErrors({ ...errors, dueDate: '' });
-            }
-          }}
-          mode="date"
-          error={errors.dueDate}
-          containerStyle={styles.inputContainer}
-        />
-
-        {/* Created Date (Read-only) */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Created Date</Text>
-          <View style={styles.readOnlyInput}>
-            <Text style={styles.readOnlyText}>
-              {createdDate.toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-              })}
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Sticky Footer Buttons */}
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
@@ -353,7 +370,7 @@ export default function EditTaskScreen() {
         <View style={styles.buttonContainer}>
           <CustomButton
             title="Save Changes"
-            onPress={handleSaveChanges}
+            onPress={handleSubmit(onSubmit)}
             variant="gradient"
             size="large"
             containerStyle={styles.saveButton}
@@ -400,12 +417,12 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 32,
   },
-  scrollView: {
+  keyboardView: {
     flex: 1,
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100, // Space for footer buttons
+    paddingBottom: 100,
   },
   inputContainer: {
     marginBottom: 20,

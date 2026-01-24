@@ -1,20 +1,20 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useTask, useMarkTaskComplete } from '@/api/tasks';
-import { DetailCard } from '@/components/DetailCard';
+import { useMarkTaskComplete, useTask } from '@/api/tasks';
 import { CustomButton } from '@/components/CustomButton';
 import { CustomToaster } from '@/components/CustomToaster';
-import type { TaskStatus, TaskPriority } from '@/components/TaskCard';
-import { useState, useEffect } from 'react';
+import { DetailCard } from '@/components/DetailCard';
+import type { TaskPriority, TaskStatus } from '@/components/TaskCard';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TaskDetailsScreen() {
   const insets = useSafeAreaInsets();
@@ -163,7 +163,7 @@ export default function TaskDetailsScreen() {
   const createdDate = task.createdDate
     ? new Date(task.createdDate)
     : task.dueDate
-    ? new Date(task.dueDate.getTime() - 24 * 60 * 60 * 1000)
+    ? new Date((task.dueDate instanceof Date ? task.dueDate : new Date(task.dueDate)).getTime() - 24 * 60 * 60 * 1000)
     : new Date();
 
   return (
@@ -181,92 +181,108 @@ export default function TaskDetailsScreen() {
       </View>
 
       {/* Scrollable Content */}
-      <ScrollView
-        style={styles.scrollView}
+      <FlatList
+        data={[
+          { type: 'title', key: 'title' },
+          { type: 'status', key: 'status' },
+          { type: 'description', key: 'description' },
+          { type: 'details', key: 'details' },
+        ]}
+        renderItem={({ item }) => {
+          switch (item.type) {
+            case 'title':
+              return (
+                <View style={styles.titleSection}>
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <View
+                    style={[
+                      styles.priorityBadge,
+                      { backgroundColor: getPriorityColor(task.priority) },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.priorityText,
+                        { color: getPriorityTextColor(task.priority) },
+                      ]}
+                    >
+                      {task.priority}
+                    </Text>
+                  </View>
+                </View>
+              );
+            case 'status':
+              return (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(task.status) },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: getStatusTextColor(task.status) },
+                    ]}
+                  >
+                    {task.status}
+                  </Text>
+                </View>
+              );
+            case 'description':
+              return (
+                <View style={styles.descriptionCard}>
+                  <Text style={styles.descriptionLabel}>Description</Text>
+                  <Text style={styles.descriptionText}>
+                    {task.description || 'No description provided'}
+                  </Text>
+                </View>
+              );
+            case 'details':
+              return (
+                <View style={styles.detailsGrid}>
+                  <View style={styles.gridRow}>
+                    <View style={styles.gridItem}>
+                      <DetailCard
+                        icon="pricetag-outline"
+                        label="Category"
+                        value={task.category || 'Not set'}
+                      />
+                    </View>
+                    <View style={styles.gridItem}>
+                      <DetailCard
+                        icon="flag-outline"
+                        label="Priority"
+                        value={task.priority}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.gridRow}>
+                    <View style={styles.gridItem}>
+                      <DetailCard
+                        icon="calendar-outline"
+                        label="Due Date"
+                        value={formatDate(task.dueDate)}
+                      />
+                    </View>
+                    <View style={styles.gridItem}>
+                      <DetailCard
+                        icon="time-outline"
+                        label="Created"
+                        value={formatDate(createdDate)}
+                      />
+                    </View>
+                  </View>
+                </View>
+              );
+            default:
+              return null;
+          }
+        }}
+        keyExtractor={(item) => item.key}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Task Title and Priority */}
-        <View style={styles.titleSection}>
-          <Text style={styles.taskTitle}>{task.title}</Text>
-          <View
-            style={[
-              styles.priorityBadge,
-              { backgroundColor: getPriorityColor(task.priority) },
-            ]}
-          >
-            <Text
-              style={[
-                styles.priorityText,
-                { color: getPriorityTextColor(task.priority) },
-              ]}
-            >
-              {task.priority}
-            </Text>
-          </View>
-        </View>
-
-        {/* Status Tag */}
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(task.status) },
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              { color: getStatusTextColor(task.status) },
-            ]}
-          >
-            {task.status}
-          </Text>
-        </View>
-
-        {/* Description Card */}
-        <View style={styles.descriptionCard}>
-          <Text style={styles.descriptionLabel}>Description</Text>
-          <Text style={styles.descriptionText}>
-            {task.description || 'No description provided'}
-          </Text>
-        </View>
-
-        {/* Detail Cards Grid */}
-        <View style={styles.detailsGrid}>
-          <View style={styles.gridRow}>
-            <View style={styles.gridItem}>
-              <DetailCard
-                icon="pricetag-outline"
-                label="Category"
-                value={task.category || 'Not set'}
-              />
-            </View>
-            <View style={styles.gridItem}>
-              <DetailCard
-                icon="flag-outline"
-                label="Priority"
-                value={task.priority}
-              />
-            </View>
-          </View>
-          <View style={styles.gridRow}>
-            <View style={styles.gridItem}>
-              <DetailCard
-                icon="calendar-outline"
-                label="Due Date"
-                value={formatDate(task.dueDate)}
-              />
-            </View>
-            <View style={styles.gridItem}>
-              <DetailCard
-                icon="time-outline"
-                label="Created"
-                value={formatDate(createdDate)}
-              />
-            </View>
-          </View>
-        </View>
-      </ScrollView>
+      />
 
       {/* Sticky Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
@@ -330,9 +346,6 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 32,
-  },
-  scrollView: {
-    flex: 1,
   },
   scrollContent: {
     padding: 20,

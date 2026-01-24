@@ -1,16 +1,15 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useAuth } from '@/api/auth';
 import { CustomButton } from '@/components/CustomButton';
-import { getUsernameFromEmail, capitalizeUsername } from '@/utils/username';
+import { capitalizeUsername, getUsernameFromEmail } from '@/utils/username';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import {
+    FlatList,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 
 export default function WelcomeScreen() {
   const { data: user } = useAuth();
@@ -21,59 +20,63 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <ScrollView
+    <FlatList
+      data={[{ type: 'content', key: 'content' }]}
+      renderItem={() => (
+        <View style={styles.content}>
+          {/* Icon with gradient and decorative circles */}
+          <View style={styles.iconSection}>
+            <View style={styles.decorativeCircles}>
+              {/* Orange circle */}
+              <View style={[styles.circle, styles.orangeCircle]} />
+              {/* Pink circle */}
+              <View style={[styles.circle, styles.pinkCircle]} />
+              {/* Green circle */}
+              <View style={[styles.circle, styles.greenCircle]} />
+            </View>
+            <LinearGradient
+              colors={['#8B5CF6', '#A78BFA']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.iconGradient}
+            >
+              <Ionicons name="star" size={40} color="#fff" />
+              <View style={styles.plusIcon}>
+                <Ionicons name="add" size={16} color="#fff" />
+              </View>
+            </LinearGradient>
+          </View>
+
+          {/* Welcome Message */}
+          <View style={styles.welcomeSection}>
+            <Text style={styles.greeting}>
+              Hello, {username}! <Text style={styles.emoji}>👋</Text>
+            </Text>
+            <Text style={styles.message}>
+              Let's complete your tasks today and{'\n'}
+              make it a productive day!
+            </Text>
+          </View>
+
+          {/* Go to Dashboard Button */}
+          <View style={styles.buttonSection}>
+            <CustomButton
+              title="Go to Dashboard"
+              onPress={handleGoToDashboard}
+              variant="gradient"
+              size="large"
+              fullWidth
+              containerStyle={styles.dashboardButton}
+              rightIcon={<Ionicons name="arrow-forward" size={20} color="#fff" />}
+            />
+          </View>
+        </View>
+      )}
+      keyExtractor={(item) => item.key}
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
-    >
-      <View style={styles.content}>
-        {/* Icon with gradient and decorative circles */}
-        <View style={styles.iconSection}>
-          <View style={styles.decorativeCircles}>
-            {/* Orange circle */}
-            <View style={[styles.circle, styles.orangeCircle]} />
-            {/* Pink circle */}
-            <View style={[styles.circle, styles.pinkCircle]} />
-            {/* Green circle */}
-            <View style={[styles.circle, styles.greenCircle]} />
-          </View>
-          <LinearGradient
-            colors={['#8B5CF6', '#A78BFA']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconGradient}
-          >
-            <Ionicons name="star" size={40} color="#fff" />
-            <View style={styles.plusIcon}>
-              <Ionicons name="add" size={16} color="#fff" />
-            </View>
-          </LinearGradient>
-        </View>
-
-        {/* Welcome Message */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.greeting}>
-            Hello, {username}! <Text style={styles.emoji}>👋</Text>
-          </Text>
-          <Text style={styles.message}>
-            Let's complete your tasks today and{'\n'}
-            make it a productive day!
-          </Text>
-        </View>
-
-        {/* Go to Dashboard Button */}
-        <View style={styles.buttonSection}>
-          <CustomButton
-            title="Go to Dashboard"
-            onPress={handleGoToDashboard}
-            variant="gradient"
-            size="large"
-            fullWidth
-            containerStyle={styles.dashboardButton}
-            rightIcon={<Ionicons name="arrow-forward" size={20} color="#fff" />}
-          />
-        </View>
-      </View>
-    </ScrollView>
+      showsVerticalScrollIndicator={false}
+    />
   );
 }
 
