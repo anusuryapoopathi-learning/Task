@@ -263,6 +263,18 @@ zod/
   - Session management
   - User data fetching
 
+### Auth Context (Assignment Requirement)
+- **Decision**: Add a Context API wrapper for authentication
+- **Location**: `contexts/AuthContext.tsx`
+- **Provides**:
+  - `user`: currently authenticated user (restored from storage via the existing auth hooks)
+  - `login(credentials)`: logs in and updates stored session
+  - `signup(input)`: creates an account (does not auto-login; returns to login screen)
+  - `logout()`: clears session and redirects to login
+- **Rationale**:
+  - Meets the assignment requirement for Context API auth state
+  - Keeps existing React Query + storage implementation intact (no rewrite)
+
 ---
 
 ## Component Architecture
