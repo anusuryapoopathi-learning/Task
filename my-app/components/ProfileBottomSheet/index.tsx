@@ -1,4 +1,4 @@
-import { useAuth, useLogout, useUpdateEmail } from '@/api/auth';
+import { useAuth, useLogout, useUpdateName } from '@/api/auth';
 import { CustomButton } from '@/components/CustomButton';
 import { CustomToaster } from '@/components/CustomToaster';
 import { capitalizeUsername, getUsernameFromEmail } from '@/utils/username';
@@ -18,7 +18,7 @@ import {
 export interface ProfileBottomSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSave?: (email: string) => void;
+  onSave?: (name: string) => void;
 }
 
 export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
@@ -28,20 +28,20 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
 }) => {
   const { data: user } = useAuth();
   const logoutMutation = useLogout();
-  const updateEmailMutation = useUpdateEmail();
-  const [email, setEmail] = useState(user?.email || '');
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const updateNameMutation = useUpdateName();
+  const [name, setName] = useState(user?.name || '');
+  const [isEditingName, setIsEditingName] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Update email when user changes
+  // Update name when user changes
   useEffect(() => {
-    if (user?.email) {
-      setEmail(user.email);
+    if (user?.name) {
+      setName(user.name);
     }
-  }, [user?.email]);
+  }, [user?.name]);
 
-  const handleEditEmail = () => {
-    setIsEditingEmail(true);
+  const handleEditName = () => {
+    setIsEditingName(true);
   };
 
   const handleSave = async () => {
@@ -50,45 +50,44 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
       return;
     }
 
-    if (!email || email.trim() === '') {
-      setToastMessage('Email cannot be empty');
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setToastMessage('Name cannot be empty');
       return;
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setToastMessage('Please enter a valid email address');
+    if (trimmed.length < 2) {
+      setToastMessage('Name must be at least 2 characters');
       return;
     }
 
-    // Check if email changed
-    if (email === user.email) {
-      setIsEditingEmail(false);
+    // Check if name changed
+    if (trimmed === user.name) {
+      setIsEditingName(false);
       return;
     }
 
     try {
-      await updateEmailMutation.mutateAsync({
+      await updateNameMutation.mutateAsync({
         userId: user.id,
-        newEmail: email.trim(),
+        newName: trimmed,
       });
       
-      setIsEditingEmail(false);
-      setToastMessage('Email updated successfully');
+      setIsEditingName(false);
+      setToastMessage('Name updated successfully');
       
       // Call onSave callback if provided
       if (onSave) {
-        onSave(email.trim());
+        onSave(trimmed);
       }
     } catch (error) {
-      setToastMessage(error instanceof Error ? error.message : 'Failed to update email');
+      setToastMessage(error instanceof Error ? error.message : 'Failed to update name');
     }
   };
 
   const handleCancel = () => {
-    setEmail(user?.email || '');
-    setIsEditingEmail(false);
+    setName(user?.name || '');
+    setIsEditingName(false);
   };
 
   const handleLogout = () => {
@@ -97,7 +96,7 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
   };
 
   const handleClose = () => {
-    if (isEditingEmail) {
+    if (isEditingName) {
       handleCancel();
     }
     onClose();
@@ -138,7 +137,7 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
               <Ionicons name="close" size={20} color="#6B7280" />
             </TouchableOpacity>
 
-            {!isEditingEmail ? (
+            {!isEditingName ? (
               // Profile View
               <>
                 {/* Profile Icon */}
@@ -161,10 +160,10 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
                 <View style={styles.actionButtonsContainer}>
                   <TouchableOpacity
                     style={styles.editEmailButton}
-                    onPress={handleEditEmail}
+                    onPress={handleEditName}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.editEmailText}>Edit Email</Text>
+                    <Text style={styles.editEmailText}>Edit Name</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -178,7 +177,7 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
                 </View>
               </>
             ) : (
-              // Edit Email View
+              // Edit Name View
               <>
                 {/* Profile Icon */}
                 <View style={styles.profileIconContainer}>
@@ -187,20 +186,21 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
                   </View>
                 </View>
 
-                {/* User Name */}
-                <Text style={styles.userName}>{displayName}</Text>
+                {/* Email (read-only) */}
+                <View style={styles.emailDisplayContainer}>
+                  <Ionicons name="mail-outline" size={18} color="#6B7280" style={styles.emailIcon} />
+                  <Text style={styles.emailText}>{user?.email || ''}</Text>
+                </View>
 
-                {/* Email Input */}
+                {/* Name Input */}
                 <View style={styles.emailInputContainer}>
-                  <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.emailInputIcon} />
+                  <Ionicons name="person-outline" size={20} color="#6B7280" style={styles.emailInputIcon} />
                   <TextInput
                     style={styles.emailInput}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter email"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Enter name"
+                    autoCapitalize="words"
                     autoFocus
                   />
                 </View>
@@ -223,7 +223,7 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
                       variant="gradient"
                       size="large"
                       containerStyle={styles.saveButton}
-                      disabled={updateEmailMutation.isPending}
+                      disabled={updateNameMutation.isPending}
                     />
                   </View>
                 </View>
@@ -235,7 +235,7 @@ export const ProfileBottomSheet: React.FC<ProfileBottomSheetProps> = ({
       <CustomToaster
         visible={toastMessage !== null}
         message={toastMessage || ''}
-        type={updateEmailMutation.isError ? 'error' : 'success'}
+        type={updateNameMutation.isError ? 'error' : 'success'}
         onHide={() => setToastMessage(null)}
       />
     </Modal>

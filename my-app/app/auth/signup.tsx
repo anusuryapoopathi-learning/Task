@@ -2,7 +2,7 @@ import { CustomButton } from '@/components/CustomButton';
 import { CustomInput } from '@/components/CustomInput';
 import { CustomToaster } from '@/components/CustomToaster';
 import { useAuthContext } from '@/contexts/AuthContext';
-import { signinZodSchema } from '@/zod/signinZod/signinZod';
+import { signupZodSchema } from '@/zod/signupZod/signupZod';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -19,51 +19,53 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
-export default function LoginScreen() {
+export default function SignupScreen() {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  const { login } = useAuthContext();
+  const { signup } = useAuthContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = async () => {
-    // Reset errors
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const handleSignup = async () => {
     setErrors({});
 
     try {
-      // Validate with Zod
-      const validated = signinZodSchema.parse({ email, password });
-
-      // Attempt login
+      const validated = signupZodSchema.parse({ name, email, password, confirmPassword });
       setIsSubmitting(true);
-      await login(validated);
-      
-      // Show success toast
-      setToast({ message: 'Login successfully', type: 'success' });
+      await signup({
+        name: validated.name,
+        email: validated.email,
+        password: validated.password,
+      });
+
+      setToast({ message: 'Signup successful. Please login.', type: 'success' });
+      router.replace('/auth/login');
     } catch (error) {
       if (error instanceof z.ZodError) {
-        // Handle validation errors
-        const fieldErrors: { email?: string; password?: string } = {};
+        const fieldErrors: typeof errors = {};
         error.issues.forEach((err) => {
-          if (err.path[0] === 'email') {
-            fieldErrors.email = err.message;
-          } else if (err.path[0] === 'password') {
-            fieldErrors.password = err.message;
-          }
+          const field = err.path[0];
+          if (field === 'name') fieldErrors.name = err.message;
+          if (field === 'email') fieldErrors.email = err.message;
+          if (field === 'password') fieldErrors.password = err.message;
+          if (field === 'confirmPassword') fieldErrors.confirmPassword = err.message;
         });
         setErrors(fieldErrors);
-      } else {
-        // Handle API errors
-        const authError = error as { message?: string; code?: string };
-        if (authError.code === 'USER_NOT_FOUND') {
-          setToast({ message: 'User not found', type: 'error' });
-        } else {
-          setToast({ message: authError.message || 'Login failed', type: 'error' });
-        }
+        return;
       }
+
+      const authError = error as { message?: string };
+      setToast({ message: authError.message || 'Signup failed', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -80,7 +82,6 @@ export default function LoginScreen() {
           data={[{ type: 'content', key: 'content' }]}
           renderItem={() => (
             <View style={styles.content}>
-              {/* App Icon */}
               <View style={styles.iconContainer}>
                 <LinearGradient
                   colors={['#8B5CF6', '#3B82F6']}
@@ -88,31 +89,37 @@ export default function LoginScreen() {
                   end={{ x: 1, y: 1 }}
                   style={styles.iconGradient}
                 >
-                  <Ionicons name="checkmark" size={40} color="#fff" />
+                  <Ionicons name="person-add" size={36} color="#fff" />
                 </LinearGradient>
               </View>
 
-              {/* Welcome Message */}
               <View style={styles.welcomeContainer}>
-                <Text style={styles.welcomeText}>
-                  Welcome Back <Text style={styles.emoji}>👋</Text>
-                </Text>
-                <Text style={styles.subtitle}>
-                  Sign in to continue managing your tasks
-                </Text>
+                <Text style={styles.welcomeText}>Create Account</Text>
+                <Text style={styles.subtitle}>Sign up to start managing your tasks</Text>
               </View>
 
-              {/* Form */}
               <View style={styles.form}>
+                <CustomInput
+                  label="Name"
+                  placeholder="Enter your name"
+                  value={name}
+                  onChangeText={(text: string) => {
+                    setName(text);
+                    if (errors.name) setErrors({ ...errors, name: undefined });
+                  }}
+                  autoCapitalize="words"
+                  editable={!isSubmitting}
+                  error={errors.name}
+                  containerStyle={styles.inputContainer}
+                />
+
                 <CustomInput
                   label="Email"
                   placeholder="Enter your email"
                   value={email}
                   onChangeText={(text: string) => {
                     setEmail(text);
-                    if (errors.email) {
-                      setErrors({ ...errors, email: undefined });
-                    }
+                    if (errors.email) setErrors({ ...errors, email: undefined });
                   }}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -128,9 +135,7 @@ export default function LoginScreen() {
                   value={password}
                   onChangeText={(text: string) => {
                     setPassword(text);
-                    if (errors.password) {
-                      setErrors({ ...errors, password: undefined });
-                    }
+                    if (errors.password) setErrors({ ...errors, password: undefined });
                   }}
                   secureTextEntry
                   showPasswordToggle
@@ -141,38 +146,49 @@ export default function LoginScreen() {
                   containerStyle={styles.inputContainer}
                 />
 
+                <CustomInput
+                  label="Confirm Password"
+                  placeholder="Re-enter your password"
+                  value={confirmPassword}
+                  onChangeText={(text: string) => {
+                    setConfirmPassword(text);
+                    if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined });
+                  }}
+                  secureTextEntry
+                  showPasswordToggle
+                  autoCapitalize="none"
+                  editable={!isSubmitting}
+                  error={errors.confirmPassword}
+                  containerStyle={styles.inputContainer}
+                />
+
                 <CustomButton
-                  title="Sign In"
-                  onPress={handleLogin}
+                  title="Sign Up"
+                  onPress={handleSignup}
                   variant="gradient"
                   size="large"
                   fullWidth
                   loading={isSubmitting}
                   disabled={isSubmitting}
-                  containerStyle={styles.signInButton}
+                  containerStyle={styles.signUpButton}
                 />
               </View>
 
-              {/* Sign Up Link */}
-              <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>Don't have an account? </Text>
-                <TouchableOpacity onPress={() => router.push('/auth/signup')} disabled={isSubmitting}>
-                  <Text style={styles.signUpLink}>Sign up</Text>
+              <View style={styles.loginContainer}>
+                <Text style={styles.loginText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => router.replace('/auth/login')} disabled={isSubmitting}>
+                  <Text style={styles.loginLink}>Go to Login</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
           keyExtractor={(item) => item.key}
-          contentContainerStyle={[
-            styles.contentContainer,
-            { paddingBottom: Math.max(insets.bottom, 40) },
-          ]}
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: Math.max(insets.bottom, 40) }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         />
       </KeyboardAvoidingView>
 
-      {/* Toast Notification */}
       <CustomToaster
         visible={toast !== null}
         message={toast?.message || ''}
@@ -202,7 +218,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
   },
   iconGradient: {
     width: 80,
@@ -213,16 +229,13 @@ const styles = StyleSheet.create({
   },
   welcomeContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
   welcomeText: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 8,
-  },
-  emoji: {
-    fontSize: 32,
   },
   subtitle: {
     fontSize: 16,
@@ -230,25 +243,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    marginBottom: 24,
-  },
-  inputContainer: {
     marginBottom: 20,
   },
-  signInButton: {
+  inputContainer: {
+    marginBottom: 18,
+  },
+  signUpButton: {
     marginTop: 8,
   },
-  signUpContainer: {
+  loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 16,
   },
-  signUpText: {
+  loginText: {
     fontSize: 14,
     color: '#6B7280',
   },
-  signUpLink: {
+  loginLink: {
     fontSize: 14,
     color: '#3B82F6',
     fontWeight: '600',

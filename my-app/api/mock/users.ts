@@ -48,6 +48,34 @@ export function findUserByCredentials(
 }
 
 /**
+ * Create a new user
+ */
+export async function createUser(input: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<Omit<User, 'password'>> {
+  await delay(700);
+
+  const existing = findUserByEmail(input.email);
+  if (existing) {
+    throw new Error('Email already registered');
+  }
+
+  const newUser: User = {
+    id: `${Date.now()}`,
+    name: input.name,
+    email: input.email,
+    password: input.password,
+    role: 'user',
+  };
+
+  mockUsers.push(newUser);
+  const { password, ...userWithoutPassword } = newUser;
+  return userWithoutPassword;
+}
+
+/**
  * Update user email
  */
 export async function updateUserEmail(userId: string, newEmail: string): Promise<Omit<User, 'password'>> {
@@ -62,6 +90,22 @@ export async function updateUserEmail(userId: string, newEmail: string): Promise
   mockUsers[userIndex].email = newEmail;
 
   // Return user without password
+  const { password, ...userWithoutPassword } = mockUsers[userIndex];
+  return userWithoutPassword;
+}
+
+/**
+ * Update user name
+ */
+export async function updateUserName(userId: string, newName: string): Promise<Omit<User, 'password'>> {
+  await delay(500);
+
+  const userIndex = mockUsers.findIndex((user) => user.id === userId);
+  if (userIndex === -1) {
+    throw new Error('User not found');
+  }
+
+  mockUsers[userIndex].name = newName;
   const { password, ...userWithoutPassword } = mockUsers[userIndex];
   return userWithoutPassword;
 }

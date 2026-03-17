@@ -1,5 +1,5 @@
 import { delay } from '@/api/mock/delay';
-import { findUserByCredentials, updateUserEmail } from '@/api/mock/users';
+import { createUser, findUserByEmail, updateUserName } from '@/api/mock/users';
 import { queryKeys } from '@/api/query-keys';
 import { asyncStorage, secureStore } from '@/lib/storage';
 import type { AuthError, LoginRequest, LoginResponse, User } from '@/types/auth';
@@ -19,23 +19,23 @@ export function useLogin() {
     mutationFn: async (credentials) => {
       await delay(800); // Simulate network delay
 
-      const user = findUserByCredentials(credentials.email, credentials.password);
+      const userByEmail = findUserByEmail(credentials.email);
+      if (!userByEmail) {
+        throw { message: 'User not found', code: 'USER_NOT_FOUND' } as AuthError;
+      }
 
-      if (!user) {
-        throw {
-          message: 'Invalid email or password',
-          code: 'INVALID_CREDENTIALS',
-        } as AuthError;
+      if (userByEmail.password !== credentials.password) {
+        throw { message: 'Invalid password', code: 'INVALID_CREDENTIALS' } as AuthError;
       }
 
       // Generate mock token
-      const token = `mock_token_${user.id}_${Date.now()}`;
+      const token = `mock_token_${userByEmail.id}_${Date.now()}`;
 
       // Store token securely
       await secureStore.setItem(TOKEN_KEY, token);
 
       // Store user data
-      const { password, ...userWithoutPassword } = user;
+      const { password, ...userWithoutPassword } = userByEmail;
       await asyncStorage.setItem(USER_KEY, userWithoutPassword);
 
       return {
@@ -51,6 +51,23 @@ export function useLogin() {
       );
       // Navigate to welcome screen
       router.replace('/welcome');
+    },
+  });
+}
+
+/**
+ * Signup mutation (creates user, does NOT log in)
+ */
+export function useSignup() {
+  return useMutation<Omit<User, 'password'>, AuthError, { name: string; email: string; password: string }>({
+    mutationFn: async (input) => {
+      try {
+        const user = await createUser(input);
+        return user;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Signup failed';
+        throw { message, code: 'SIGNUP_FAILED' } as AuthError;
+      }
     },
   });
 }
@@ -79,19 +96,15 @@ export function useLogout() {
 }
 
 /**
- * Update user email mutation
+ * Update user name mutation
  */
-export function useUpdateEmail() {
+export function useUpdateName() {
   const queryClient = useQueryClient();
 
-  return useMutation<Omit<User, 'password'>, Error, { userId: string; newEmail: string }>({
-    mutationFn: async ({ userId, newEmail }) => {
-      // Update email in mock API
-      const updatedUser = await updateUserEmail(userId, newEmail);
-
-      // Update user data in storage
+  return useMutation<Omit<User, 'password'>, Error, { userId: string; newName: string }>({
+    mutationFn: async ({ userId, newName }) => {
+      const updatedUser = await updateUserName(userId, newName);
       await asyncStorage.setItem(USER_KEY, updatedUser);
-
       return updatedUser;
     },
     onSuccess: (data) => {
